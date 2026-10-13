@@ -1,0 +1,202 @@
+openapi: 3.1.0
+
+info:
+  title: Geospatial Products Catalog
+  version: 0.1.0
+  description: API for managing and searching geospatial products.
+
+tags:
+  - name: Products
+    description: Product management and search operations.
+
+paths:
+  /products:
+    post:
+      tags:
+        - Products
+      operationId: createProduct
+      summary: Create a product
+      description: |
+        Creates a product with a server-generated unique identifier.
+        The bounding polygon is stored in EPSG:4326.
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProduct"
+
+      responses:
+        "201":
+          description: Product created successfully.
+          headers:
+            Location:
+              description: URL for retrieving the created product.
+              schema:
+                type: string
+                format: uri-reference
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+
+        "400":
+          description: Invalid product data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                code: VALIDATION_ERROR
+                message: name must contain between 1 and 48 characters.
+                field: name
+
+components:
+  schemas:
+    Product:
+      allOf:
+        - $ref: "#/components/schemas/CreateProduct"
+        - type: object
+          required:
+            - id
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+              description: Server-generated unique product identifier.
+
+    CreateProduct:
+      type: object
+      required:
+        - name
+        - boundingPolygon
+        - consumptionLink
+        - productType
+        - consumptionProtocol
+        - resolutionBest
+        - minZoom
+        - maxZoom
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 48
+
+        description:
+          type: string
+          minLength: 1
+
+        boundingPolygon:
+          $ref: "#/components/schemas/BoundingPolygon"
+
+        consumptionLink:
+          type: string
+          format: uri
+
+        productType:
+          type: string
+          enum:
+            - raster
+            - rasterized vector
+            - 3d tiles
+            - QMesh
+
+        consumptionProtocol:
+          type: string
+          enum:
+            - WMS
+            - WMTS
+            - XYZ
+            - 3D Tiles
+
+        resolutionBest:
+          type: number
+          minimum: 0
+
+        minZoom:
+          $ref: "#/components/schemas/ZoomLevel"
+
+        maxZoom:
+          $ref: "#/components/schemas/ZoomLevel"
+
+    ZoomLevel:
+      type: integer
+      exclusiveMinimum: 0
+
+    BoundingPolygon:
+      description: |
+        GeoJSON Polygon or MultiPolygon using WGS84 longitude and latitude,
+        with optional height in metres.
+        Stored in EPSG:4326.
+      anyOf:
+        - $ref: "#/components/schemas/Polygon"
+        - $ref: "#/components/schemas/MultiPolygon"
+
+    Polygon:
+      type: object
+      required:
+        - type
+        - coordinates
+      properties:
+        type:
+          const: Polygon
+        coordinates:
+          $ref: "#/components/schemas/PolygonCoordinates"
+
+    MultiPolygon:
+      type: object
+      required:
+        - type
+        - coordinates
+      properties:
+        type:
+          const: MultiPolygon
+        coordinates:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/PolygonCoordinates"
+
+    PolygonCoordinates:
+      type: array
+      minItems: 1
+      items:
+        $ref: "#/components/schemas/LinearRing"
+
+    LinearRing:
+      type: array
+      minItems: 4
+      items:
+        $ref: "#/components/schemas/Position"
+
+    Position:
+      type: array
+      minItems: 2
+      maxItems: 3
+      prefixItems:
+        - type: number
+          minimum: -180
+          maximum: 180
+        - type: number
+          minimum: -90
+          maximum: 90
+        - type: number
+      items: false
+
+    ApiError:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code.
+        message:
+          type: string
+          description: Explanation of the error.
+        field:
+          type: string
+          description: Input field associated with the error, when applicable.
