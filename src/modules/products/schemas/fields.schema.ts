@@ -81,7 +81,7 @@ export const ConsumptionProtocolSchema = Type.Union([
 export type ConsumptionProtocol = Type.Static<typeof ConsumptionProtocolSchema>;
 
 export const ResolutionBestSchema = Type.Number({
-  Minimum: 0,
+  minimum: 0,
 });
 
 export const MinZoom = Type.Integer({
