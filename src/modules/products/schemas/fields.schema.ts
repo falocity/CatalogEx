@@ -58,7 +58,7 @@ export const BoundingPolygonSchema = Type.Union(
 
 export type BoundingPolygon = Type.Static<typeof BoundingPolygonSchema>;
 
-export const ConsumtionLinkSchema = Type.String({
+export const ConsumptionLinkSchema = Type.String({
   format: "uri",
 });
 
