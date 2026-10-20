@@ -12,7 +12,7 @@ const EqualityFieldsSchema = Type.Object({
   id: ProductSchema.properties.id,
   name: ProductSchema.properties.name,
   description: ProductSchema.properties.description,
-  consumtionLink: ProductSchema.properties.consumptionLink,
+  consumptionLink: ProductSchema.properties.consumptionLink,
   productType: ProductSchema.properties.productType,
   consumptionProtocol: ProductSchema.properties.consumptionProtocol,
 });
