@@ -23,9 +23,11 @@ const LatitudeSchema = Type.Number({
   maximum: 90,
 });
 
+const AltitudeSchema = Type.Number();
+
 const PositionSchema = Type.Union([
   Type.Tuple([LongitudeSchema, LatitudeSchema]),
-  Type.Tuple([LongitudeSchema, LatitudeSchema, Type.Number()]),
+  Type.Tuple([LongitudeSchema, LatitudeSchema, AltitudeSchema]),
 ]);
 
 const LinearRingSchema = Type.Array(PositionSchema, {
@@ -58,7 +60,7 @@ export const BoundingPolygonSchema = Type.Union(
 
 export type BoundingPolygon = Type.Static<typeof BoundingPolygonSchema>;
 
-export const ConsumtionLinkSchema = Type.String({
+export const ConsumptionLinkSchema = Type.String({
   format: "uri",
 });
 
