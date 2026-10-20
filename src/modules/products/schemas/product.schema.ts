@@ -2,7 +2,7 @@ import Type from "typebox";
 import {
   BoundingPolygonSchema,
   ConsumptionProtocolSchema,
-  ConsumtionLinkSchema,
+  ConsumptionLinkSchema,
   MaxZoom,
   MinZoom,
   ProductDescriptionSchema,
@@ -17,7 +17,7 @@ export const ProductSchema = Type.Object({
   name: ProductNameSchema,
   description: Type.Optional(ProductDescriptionSchema),
   boundingPolygon: BoundingPolygonSchema,
-  consumptionLink: ConsumtionLinkSchema,
+  consumptionLink: ConsumptionLinkSchema,
   productType: ProductTypeSchema,
   consumptionProtocol: ConsumptionProtocolSchema,
   resolutionBest: ResolutionBestSchema,
