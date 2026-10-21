@@ -1,3 +1,10 @@
 {
--  "cSpell.words": ["catalogex", "typebox", "WMTS"]
--}
+  "cSpell.words": [
+    "catalogex",
+    "healthcheck",
+    "isready",
+    "postgis",
+    "typebox",
+    "WMTS",
+  ]
+}
