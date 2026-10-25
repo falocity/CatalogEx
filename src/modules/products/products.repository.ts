@@ -3,6 +3,7 @@ import { db } from "../../db/client.js";
 import { products } from "../../db/schema.js";
 import type { BoundingPolygon } from "./schemas/fields.schema.js";
 import type { CreateProduct, Product } from "./schemas/product.schema.js";
+import type { UpdateProduct } from "./schemas/update-product.schema.js";
 
 const productSelection = {
   ...getTableColumns(products),
@@ -84,4 +85,37 @@ export async function deleteProduct(id: string): Promise<boolean> {
     .returning({ id: products.id });
 
   return deleted !== undefined;
+}
+
+export async function updateProduct(
+  id: string,
+  input: UpdateProduct,
+): Promise<Product | undefined> {
+  const [updated] = await db
+    .update(products)
+    .set({
+      name: input.name,
+      description: input.description,
+      boundingPolygon:
+        input.boundingPolygon === undefined
+          ? undefined
+          : sql`
+              ST_SetSRID(
+                ST_GeomFromGeoJSON(
+                  ${JSON.stringify(input.boundingPolygon)}
+                ),
+                4326
+              )
+            `,
+      consumptionLink: input.consumptionLink,
+      productType: input.productType,
+      consumptionProtocol: input.consumptionProtocol,
+      resolutionBest: input.resolutionBest,
+      minZoom: input.minZoom,
+      maxZoom: input.maxZoom,
+    })
+    .where(eq(products.id, id))
+    .returning(productSelection);
+
+  return updated ? toProduct(updated) : undefined;
 }

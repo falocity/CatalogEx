@@ -21,6 +21,8 @@ import {
   ProductsPageSchema,
 } from "./schemas/pagination.schema.js";
 import { deleteProductHandler } from "./operations/delete-product.js";
+import { updateProductHandler } from "./operations/update-product.js";
+import { UpdateProductSchema } from "./schemas/update-product.schema.js";
 
 const createBodySchema = Type.Object(CreateProductSchemaInput.properties, {
   additionalProperties: false,
@@ -67,6 +69,7 @@ export const productsRoutes: FastifyPluginAsyncTypebox = async (app) => {
     },
     getProductByIdHandler,
   );
+  
   app.get(
     "/products",
     {
@@ -79,6 +82,7 @@ export const productsRoutes: FastifyPluginAsyncTypebox = async (app) => {
     },
     listProductsHandler,
   );
+
   app.delete(
     "/products/:id",
     {
@@ -102,5 +106,32 @@ export const productsRoutes: FastifyPluginAsyncTypebox = async (app) => {
       },
     },
     deleteProductHandler,
+  );
+
+  app.patch(
+    "/products/:id",
+    {
+      schema: {
+        params: Type.Object(
+          {
+            id: ProductIdSchema,
+          },
+          { additionalProperties: false },
+        ),
+        body: UpdateProductSchema,
+        response: {
+          [StatusCodes.OK]: ProductSchema,
+          [StatusCodes.NOT_FOUND]: Type.Object(
+            {
+              code: Type.Literal("PRODUCT_NOT_FOUND"),
+              message: Type.String(),
+              field: Type.Optional(Type.String()),
+            },
+            { additionalProperties: false },
+          ),
+        },
+      },
+    },
+    updateProductHandler,
   );
 };
