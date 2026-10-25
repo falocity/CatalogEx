@@ -41,14 +41,23 @@ export function registerErrorHandler(app: FastifyInstance): void {
 
     if (
       databaseError instanceof DatabaseError &&
-      databaseError.code === "23514" &&
-      databaseError.constraint === "products_bounding_polygon_valid"
+      databaseError.code === "23514"
     ) {
-      return reply.code(StatusCodes.BAD_REQUEST).send({
-        code: "VALIDATION_ERROR",
-        message: "boundingPolygon must be a valid, nonempty geometry.",
-        field: "boundingPolygon",
-      });
+      switch (databaseError.constraint) {
+        case "products_zoom_range_valid":
+          return reply.code(StatusCodes.BAD_REQUEST).send({
+            code: "VALIDATION_ERROR",
+            message: "minZoom must not exceed maxZoom.",
+            field: "minZoom",
+          });
+
+        case "products_bounding_polygon_valid":
+          return reply.code(StatusCodes.BAD_REQUEST).send({
+            code: "VALIDATION_ERROR",
+            message: "boundingPolygon must be a valid, nonempty geometry.",
+            field: "boundingPolygon",
+          });
+      }
     }
 
     request.log.error({ err: error }, "Request failed");
