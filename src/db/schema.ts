@@ -66,9 +66,12 @@ export const products = pgTable(
     ),
 
     check("products_min_zoom_positive", sql`${table.minZoom} > 0`),
-
     check("products_max_zoom_positive", sql`${table.maxZoom} > 0`),
-
+    check(
+      "products_zoom_range_valid",
+      sql`${table.minZoom} <= ${table.maxZoom}`,
+    ),
+    
     check(
       "products_bounding_polygon_type",
       sql`
