@@ -3,14 +3,23 @@ import {
   TypeBoxValidatorCompiler,
   type FastifyPluginAsyncTypebox,
 } from "@fastify/type-provider-typebox";
+
 import { StatusCodes } from "http-status-codes";
+
 import {
   CreateProductSchemaInput,
   ProductSchema,
 } from "./schemas/product.schema.js";
 import { ProductIdSchema } from "./schemas/fields.schema.js";
 import { createProductHandler } from "./operations/create-product.js";
-import { getProductByIdHandler } from "./operations/read-products.js";
+import {
+  getProductByIdHandler,
+  listProductsHandler,
+} from "./operations/read-products.js";
+import {
+  PaginationQuerySchema,
+  ProductsPageSchema,
+} from "./schemas/pagination.schema.js";
 
 const createBodySchema = Type.Object(CreateProductSchemaInput.properties, {
   additionalProperties: false,
@@ -56,5 +65,17 @@ export const productsRoutes: FastifyPluginAsyncTypebox = async (app) => {
       },
     },
     getProductByIdHandler,
+  );
+  app.get(
+    "/products",
+    {
+      schema: {
+        querystring: PaginationQuerySchema,
+        response: {
+          [StatusCodes.OK]: ProductsPageSchema,
+        },
+      },
+    },
+    listProductsHandler,
   );
 };

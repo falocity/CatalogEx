@@ -1,6 +1,11 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { StatusCodes } from "http-status-codes";
-import { getProductById } from "../products.repository.js";
+import { getProductById, listProducts } from "../products.repository.js";
+import {
+  DEFAULT_PAGE_LIMIT,
+  DEFAULT_PAGE_OFFSET,
+  type PaginationQuery,
+} from "../schemas/pagination.schema.js";
 
 export async function getProductByIdHandler(
   request: FastifyRequest<{ Params: { id: string } }>,
@@ -17,4 +22,16 @@ export async function getProductByIdHandler(
   }
 
   return reply.code(StatusCodes.OK).send(product);
+}
+
+export async function listProductsHandler(
+  request: FastifyRequest<{ Querystring: PaginationQuery }>,
+  reply: FastifyReply,
+) {
+  const limit = request.query.limit ?? DEFAULT_PAGE_LIMIT;
+  const offset = request.query.offset ?? DEFAULT_PAGE_OFFSET;
+
+  const page = await listProducts(limit, offset);
+
+  return reply.code(StatusCodes.OK).send(page);
 }
