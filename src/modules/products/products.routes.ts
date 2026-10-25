@@ -3,15 +3,19 @@ import {
   TypeBoxValidatorCompiler,
   type FastifyPluginAsyncTypebox,
 } from "@fastify/type-provider-typebox";
+import { StatusCodes } from "http-status-codes";
 import {
   CreateProductSchemaInput,
   ProductSchema,
 } from "./schemas/product.schema.js";
-import { createProduct } from "./products.repository.js";
-import { validateProductInput } from "./product.validation.js";
+import { ProductIdSchema } from "./schemas/fields.schema.js";
+import { createProductHandler } from "./operations/create-product.js";
+import { getProductByIdHandler } from "./operations/read-products.js";
+
 const createBodySchema = Type.Object(CreateProductSchemaInput.properties, {
   additionalProperties: false,
 });
+
 export const productsRoutes: FastifyPluginAsyncTypebox = async (app) => {
   app.setValidatorCompiler(TypeBoxValidatorCompiler);
 
@@ -21,19 +25,36 @@ export const productsRoutes: FastifyPluginAsyncTypebox = async (app) => {
       schema: {
         body: createBodySchema,
         response: {
-          201: ProductSchema,
+          [StatusCodes.CREATED]: ProductSchema,
         },
       },
     },
-    async (request, reply) => {
-      validateProductInput(request.body);
+    createProductHandler,
+  );
 
-      const product = await createProduct(request.body);
-
-      return reply
-        .code(201)
-        .header("Location", `/products/${product.id}`)
-        .send(product);
+  app.get(
+    "/products/:id",
+    {
+      schema: {
+        params: Type.Object(
+          {
+            id: ProductIdSchema,
+          },
+          { additionalProperties: false },
+        ),
+        response: {
+          [StatusCodes.OK]: ProductSchema,
+          [StatusCodes.NOT_FOUND]: Type.Object(
+            {
+              code: Type.Literal("PRODUCT_NOT_FOUND"),
+              message: Type.String(),
+              field: Type.Optional(Type.String()),
+            },
+            { additionalProperties: false },
+          ),
+        },
+      },
     },
+    getProductByIdHandler,
   );
 };
