@@ -23,6 +23,8 @@ import {
 import { deleteProductHandler } from "./operations/delete-product.js";
 import { updateProductHandler } from "./operations/update-product.js";
 import { UpdateProductSchema } from "./schemas/update-product.schema.js";
+import { searchProductsHandler } from "./operations/search-products.js";
+import { SearchProductsSchema } from "./schemas/search-products.schema.js";
 
 const createBodySchema = Type.Object(CreateProductSchemaInput.properties, {
   additionalProperties: false,
@@ -69,7 +71,7 @@ export const productsRoutes: FastifyPluginAsyncTypebox = async (app) => {
     },
     getProductByIdHandler,
   );
-  
+
   app.get(
     "/products",
     {
@@ -133,5 +135,18 @@ export const productsRoutes: FastifyPluginAsyncTypebox = async (app) => {
       },
     },
     updateProductHandler,
+  );
+  app.post(
+    "/products/search",
+    {
+      schema: {
+        body: SearchProductsSchema,
+        querystring: PaginationQuerySchema,
+        response: {
+          [StatusCodes.OK]: ProductsPageSchema,
+        },
+      },
+    },
+    searchProductsHandler,
   );
 };
