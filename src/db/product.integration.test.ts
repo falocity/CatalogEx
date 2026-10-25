@@ -103,3 +103,38 @@ for (const example of cases) {
     }
   });
 }
+test("products rejects Point geometry", async () => {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    await assert.rejects(
+      () =>
+        client.query(`
+          INSERT INTO products (
+            name, bounding_polygon, consumption_link,
+            product_type, consumption_protocol,
+            resolution_best, min_zoom, max_zoom
+          )
+          VALUES (
+            'Rejected Point',
+            ST_SetSRID(ST_MakePoint(34, 32), 4326),
+            'https://example.com/wms',
+            'raster', 'WMS',
+            0.5, 1, 18
+          )
+        `),
+      {
+        code: "23514",
+        constraint: "products_bounding_polygon_type",
+      },
+    );
+  } finally {
+    try {
+      await client.query("ROLLBACK");
+    } finally {
+      client.release();
+    }
+  }
+});
