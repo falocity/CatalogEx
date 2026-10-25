@@ -60,6 +60,7 @@ export async function getProductById(id: string): Promise<Product | undefined> {
 
   return product ? toProduct(product) : undefined;
 }
+
 export async function listProducts(limit: number, offset: number) {
   const rows = await db
     .select(productSelection)
@@ -74,4 +75,13 @@ export async function listProducts(limit: number, offset: number) {
     offset,
     hasMore: rows.length > limit,
   };
+}
+
+export async function deleteProduct(id: string): Promise<boolean> {
+  const [deleted] = await db
+    .delete(products)
+    .where(eq(products.id, id))
+    .returning({ id: products.id });
+
+  return deleted !== undefined;
 }

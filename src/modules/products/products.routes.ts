@@ -20,6 +20,7 @@ import {
   PaginationQuerySchema,
   ProductsPageSchema,
 } from "./schemas/pagination.schema.js";
+import { deleteProductHandler } from "./operations/delete-product.js";
 
 const createBodySchema = Type.Object(CreateProductSchemaInput.properties, {
   additionalProperties: false,
@@ -77,5 +78,29 @@ export const productsRoutes: FastifyPluginAsyncTypebox = async (app) => {
       },
     },
     listProductsHandler,
+  );
+  app.delete(
+    "/products/:id",
+    {
+      schema: {
+        params: Type.Object(
+          {
+            id: ProductIdSchema,
+          },
+          { additionalProperties: false },
+        ),
+        response: {
+          [StatusCodes.NOT_FOUND]: Type.Object(
+            {
+              code: Type.Literal("PRODUCT_NOT_FOUND"),
+              message: Type.String(),
+              field: Type.Optional(Type.String()),
+            },
+            { additionalProperties: false },
+          ),
+        },
+      },
+    },
+    deleteProductHandler,
   );
 };
