@@ -87,7 +87,7 @@ export const ResolutionBestSchema = Type.Number({
 });
 
 export const MinZoom = Type.Integer({
-  exclusiveMinimum: 0,
+  minimum: 0,
 });
 
 export const MaxZoom = Type.Integer({
