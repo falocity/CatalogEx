@@ -50,8 +50,17 @@ export function buildApp(options: FastifyServerOptions = {}): FastifyInstance {
   const controller = createProductsController(service);
 
   app.register(productsRoutes, { controller });
-  app.register(healthRoutes);
+  app.register(healthRoutes, {
+    checkDatabase: async () => {
+      const query = {
+        text: "SELECT 1",
+        query_timeout: config.readiness.queryTimeoutMs,
+      };
 
+      await pool.query(query);
+    },
+  });
+  
   const handlePoolError = (error: Error): void => {
     app.log.error({ err: error }, "Unexpected database pool error");
   };
