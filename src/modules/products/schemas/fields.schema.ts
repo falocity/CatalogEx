@@ -38,17 +38,23 @@ const PolygonCoordinatesSchema = Type.Array(LinearRingSchema, {
   minItems: 1,
 });
 
-const PolygonSchema = Type.Object({
-  type: Type.Literal("Polygon"),
-  coordinates: PolygonCoordinatesSchema,
-});
+const PolygonSchema = Type.Object(
+  {
+    type: Type.Literal("Polygon"),
+    coordinates: PolygonCoordinatesSchema,
+  },
+  { additionalProperties: false },
+);
 
-const MultiPolygonSchema = Type.Object({
-  type: Type.Literal("MultiPolygon"),
-  coordinates: Type.Array(PolygonCoordinatesSchema, {
-    minItems: 1,
-  }),
-});
+const MultiPolygonSchema = Type.Object(
+  {
+    type: Type.Literal("MultiPolygon"),
+    coordinates: Type.Array(PolygonCoordinatesSchema, {
+      minItems: 1,
+    }),
+  },
+  { additionalProperties: false },
+);
 
 export const BoundingPolygonSchema = Type.Union(
   [PolygonSchema, MultiPolygonSchema],
