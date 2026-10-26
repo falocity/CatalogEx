@@ -10,7 +10,11 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc",
     "start": "node dist/src/server.js",
-    "test:db": "node --import tsx --test src/db/product.integration.test.ts"
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "test": "node --import tsx --test src/db/product.integration.test.ts src/modules/products/products.integration.test.ts",
+    "test:db": "node --import tsx --test src/db/product.integration.test.ts",
+    "test:api": "node --import tsx --test src/modules/products/products.integration.test.ts"
   },
   "keywords": [],
   "author": "",
