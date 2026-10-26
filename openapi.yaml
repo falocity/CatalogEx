@@ -404,13 +404,13 @@ components:
       properties:
         equal:
           $ref: "#/components/schemas/EqualityOperands"
-        greaterThan:
+        greater:
           $ref: "#/components/schemas/NumericOperands"
           description: Product value > supplied value.
         greaterEqual:
           $ref: "#/components/schemas/NumericOperands"
           description: Product value >= supplied value.
-        lessThan:
+        less:
           $ref: "#/components/schemas/NumericOperands"
           description: Product value < supplied value.
         lessEqual:

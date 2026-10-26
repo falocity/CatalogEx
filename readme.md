@@ -144,8 +144,8 @@ with offset + limit. No matches return an empty items array.
 Search
 curl -i -X POST 'http://127.0.0.1:3000/products/search?limit=20&offset=0' \
  -H 'Content-Type: application/json' \
- -d '{"equal":{"productType":"raster"},"lessThan":{"resolutionBest":1}}'
-The current numeric operators are greaterThan, greaterEqual, lessThan, and
+ -d '{"equal":{"productType":"raster"},"less":{"resolutionBest":1}}'
+The current numeric operators are greater, greaterEqual, less, and
 lessEqual. equal supports non-geometry fields. Conditions are combined with
 AND. Numeric search thresholds do not inherit the minimum bounds for stored
 product values. An empty body {} returns an unfiltered page; a supplied

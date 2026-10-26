@@ -74,7 +74,7 @@ test("products API: CRUD and numeric search", async (t) => {
       url: "/products/search?limit=1&offset=0",
       payload: {
         equal: { name },
-        greaterThan: { resolutionBest: threshold },
+        greater: { resolutionBest: threshold },
       },
     });
 
