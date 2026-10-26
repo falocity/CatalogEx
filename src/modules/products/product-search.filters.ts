@@ -1,16 +1,7 @@
 import { and, eq, gt, gte, lt, lte, sql, type SQL } from "drizzle-orm";
 import { products } from "../../db/schema.js";
-import type { BoundingPolygon } from "./schemas/fields.schema.js";
+import { geometryToSql } from "./geometry.utils.js";
 import type { SearchProductsInput } from "./schemas/search-products.schema.js";
-
-function geometryOperand(geometry: BoundingPolygon): SQL {
-  return sql`
-    ST_SetSRID(
-      ST_GeomFromGeoJSON(${JSON.stringify(geometry)}),
-      4326
-    )
-  `;
-}
 
 export function buildProductSearchConditions(
   input: SearchProductsInput,
@@ -65,7 +56,7 @@ export function buildProductSearchConditions(
     conditions.push(
       sql`ST_Contains(
         ${products.boundingPolygon},
-        ${geometryOperand(contains)}
+        ${geometryToSql(contains)}
       )`,
     );
   }
@@ -76,7 +67,7 @@ export function buildProductSearchConditions(
     conditions.push(
       sql`ST_Within(
         ${products.boundingPolygon},
-        ${geometryOperand(within)}
+        ${geometryToSql(within)}
       )`,
     );
   }
@@ -87,7 +78,7 @@ export function buildProductSearchConditions(
     conditions.push(
       sql`ST_Intersects(
         ${products.boundingPolygon},
-        ${geometryOperand(intersects)}
+        ${geometryToSql(intersects)}
       )`,
     );
   }
