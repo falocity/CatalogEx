@@ -18,17 +18,13 @@ interface PoolSettings {
   connectionTimeoutMillis: number;
 }
 
-export type DatabaseConfig = PoolSettings &
-  (
-    | { connectionString: string }
-    | {
-        host: string;
-        port: number;
-        user: string;
-        password: string;
-        database: string;
-      }
-  );
+export interface DatabaseConfig extends PoolSettings {
+  host: string;
+  port: number;
+  user: string;
+  password: string;
+  database: string;
+}
 
 export interface AppConfig {
   server: {
@@ -94,54 +90,42 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
     throw new Error("HOST must not be empty");
   }
 
-  const poolSettings: PoolSettings = {
+  const database: DatabaseConfig = {
+    host: required(env, "POSTGRES_HOST"),
+    port: integer(env, "POSTGRES_PORT", 5432, 1, 65535),
+    user: required(env, "POSTGRES_USER"),
+    password: required(env, "POSTGRES_PASSWORD"),
+    database: required(env, "POSTGRES_DB"),
     max: integer(env, "DB_POOL_MAX", 10, 1),
     idleTimeoutMillis: integer(env, "DB_IDLE_TIMEOUT_MS", 30_000, 0),
-    connectionTimeoutMillis: integer(env, "DB_CONNECTION_TIMEOUT_MS", 5_000, 1),
+    connectionTimeoutMillis: integer(
+      env,
+      "DB_CONNECTION_TIMEOUT_MS",
+      5_000,
+      1,
+    ),
   };
-
-  const databaseUrl = env.DATABASE_URL;
-  let database: DatabaseConfig;
-
-  if (databaseUrl !== undefined && databaseUrl !== "") {
-    try {
-      const url = new URL(databaseUrl);
-
-      if (
-        !["postgres:", "postgresql:"].includes(url.protocol) ||
-        !url.hostname
-      ) {
-        throw new Error();
-      }
-    } catch {
-      throw new Error("DATABASE_URL must be a valid PostgreSQL connection URL");
-    }
-
-    database = {
-      connectionString: databaseUrl,
-      ...poolSettings,
-    };
-  } else {
-    database = {
-      host: required(env, "POSTGRES_HOST"),
-      port: integer(env, "POSTGRES_PORT", 5432, 1, 65535),
-      user: required(env, "POSTGRES_USER"),
-      password: required(env, "POSTGRES_PASSWORD"),
-      database: required(env, "POSTGRES_DB"),
-      ...poolSettings,
-    };
-  }
 
   return {
     server: {
       host,
       port: integer(env, "PORT", 3000, 1, 65535),
       logLevel,
-      shutdownTimeoutMs: integer(env, "SHUTDOWN_TIMEOUT_MS", 10_000, 1),
+      shutdownTimeoutMs: integer(
+        env,
+        "SHUTDOWN_TIMEOUT_MS",
+        10_000,
+        1,
+      ),
     },
     database,
     readiness: {
-      queryTimeoutMs: integer(env, "READINESS_QUERY_TIMEOUT_MS", 1_000, 1),
+      queryTimeoutMs: integer(
+        env,
+        "READINESS_QUERY_TIMEOUT_MS",
+        1_000,
+        1,
+      ),
     },
   };
 }
