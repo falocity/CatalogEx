@@ -1,15 +1,15 @@
+import { ValidationError } from "../../errors.js";
 import type { BoundingPolygon } from "./schemas/fields.schema.js";
 import type { CreateProduct } from "./schemas/product.schema.js";
+import type { UpdateProduct } from "./schemas/update-product.schema.js";
 
-export class ProductValidationError extends Error {
-  readonly field: string;
-
+export class ProductValidationError extends ValidationError {
   constructor(field: string, message: string) {
-    super(message);
+    super(field, message);
     this.name = "ProductValidationError";
-    this.field = field;
   }
 }
+
 export function validateBoundingPolygon(geometry: BoundingPolygon): void {
   const polygons =
     geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
@@ -46,6 +46,7 @@ export function validateBoundingPolygon(geometry: BoundingPolygon): void {
     }
   }
 }
+
 export function validateProductInput(input: CreateProduct): void {
   if (input.minZoom > input.maxZoom) {
     throw new ProductValidationError(
@@ -55,4 +56,21 @@ export function validateProductInput(input: CreateProduct): void {
   }
 
   validateBoundingPolygon(input.boundingPolygon);
+}
+
+export function validateProductUpdate(input: UpdateProduct): void {
+  if (
+    input.minZoom !== undefined &&
+    input.maxZoom !== undefined &&
+    input.minZoom > input.maxZoom
+  ) {
+    throw new ProductValidationError(
+      "minZoom",
+      "minZoom must not exceed maxZoom.",
+    );
+  }
+
+  if (input.boundingPolygon !== undefined) {
+    validateBoundingPolygon(input.boundingPolygon);
+  }
 }
