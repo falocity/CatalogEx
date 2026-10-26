@@ -3,34 +3,59 @@ import {
   TypeBoxValidatorCompiler,
   type FastifyPluginAsyncTypebox,
 } from "@fastify/type-provider-typebox";
-
 import { StatusCodes } from "http-status-codes";
-
+import type { ProductsController } from "./products.controller.js";
 import {
   CreateProductSchemaInput,
   ProductSchema,
 } from "./schemas/product.schema.js";
 import { ProductIdSchema } from "./schemas/fields.schema.js";
-import { createProductHandler } from "./operations/create-product.js";
-import {
-  getProductByIdHandler,
-  listProductsHandler,
-} from "./operations/read-products.js";
 import {
   PaginationQuerySchema,
   ProductsPageSchema,
 } from "./schemas/pagination.schema.js";
-import { deleteProductHandler } from "./operations/delete-product.js";
-import { updateProductHandler } from "./operations/update-product.js";
 import { UpdateProductSchema } from "./schemas/update-product.schema.js";
-import { searchProductsHandler } from "./operations/search-products.js";
 import { SearchProductsSchema } from "./schemas/search-products.schema.js";
+
+interface ProductsRoutesOptions {
+  controller: ProductsController;
+}
 
 const createBodySchema = Type.Object(CreateProductSchemaInput.properties, {
   additionalProperties: false,
 });
 
-export const productsRoutes: FastifyPluginAsyncTypebox = async (app) => {
+const idParamsSchema = Type.Object(
+  { id: ProductIdSchema },
+  { additionalProperties: false },
+);
+
+const ErrorResponseSchema = Type.Object(
+  {
+    code: Type.String(),
+    message: Type.String(),
+    field: Type.Optional(Type.String()),
+  },
+  { additionalProperties: false },
+);
+
+const commonErrorResponses = {
+  [StatusCodes.BAD_REQUEST]: ErrorResponseSchema,
+  [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorResponseSchema,
+};
+
+const notFoundResponse = {
+  [StatusCodes.NOT_FOUND]: ErrorResponseSchema,
+};
+
+const bodyErrorResponses = {
+  [StatusCodes.REQUEST_TOO_LONG]: ErrorResponseSchema,
+  [StatusCodes.UNSUPPORTED_MEDIA_TYPE]: ErrorResponseSchema,
+};
+
+export const productsRoutes: FastifyPluginAsyncTypebox<
+  ProductsRoutesOptions
+> = async (app, { controller }) => {
   app.setValidatorCompiler(TypeBoxValidatorCompiler);
 
   app.post(
@@ -40,36 +65,27 @@ export const productsRoutes: FastifyPluginAsyncTypebox = async (app) => {
         body: createBodySchema,
         response: {
           [StatusCodes.CREATED]: ProductSchema,
+          ...commonErrorResponses,
+          ...bodyErrorResponses,
         },
       },
     },
-    createProductHandler,
+    controller.createProductHandler,
   );
 
   app.get(
     "/products/:id",
     {
       schema: {
-        params: Type.Object(
-          {
-            id: ProductIdSchema,
-          },
-          { additionalProperties: false },
-        ),
+        params: idParamsSchema,
         response: {
           [StatusCodes.OK]: ProductSchema,
-          [StatusCodes.NOT_FOUND]: Type.Object(
-            {
-              code: Type.Literal("PRODUCT_NOT_FOUND"),
-              message: Type.String(),
-              field: Type.Optional(Type.String()),
-            },
-            { additionalProperties: false },
-          ),
+          ...commonErrorResponses,
+          ...notFoundResponse,
         },
       },
     },
-    getProductByIdHandler,
+    controller.getProductByIdHandler,
   );
 
   app.get(
@@ -79,63 +95,44 @@ export const productsRoutes: FastifyPluginAsyncTypebox = async (app) => {
         querystring: PaginationQuerySchema,
         response: {
           [StatusCodes.OK]: ProductsPageSchema,
+          ...commonErrorResponses,
         },
       },
     },
-    listProductsHandler,
-  );
-
-  app.delete(
-    "/products/:id",
-    {
-      schema: {
-        params: Type.Object(
-          {
-            id: ProductIdSchema,
-          },
-          { additionalProperties: false },
-        ),
-        response: {
-          [StatusCodes.NOT_FOUND]: Type.Object(
-            {
-              code: Type.Literal("PRODUCT_NOT_FOUND"),
-              message: Type.String(),
-              field: Type.Optional(Type.String()),
-            },
-            { additionalProperties: false },
-          ),
-        },
-      },
-    },
-    deleteProductHandler,
+    controller.listProductsHandler,
   );
 
   app.patch(
     "/products/:id",
     {
       schema: {
-        params: Type.Object(
-          {
-            id: ProductIdSchema,
-          },
-          { additionalProperties: false },
-        ),
+        params: idParamsSchema,
         body: UpdateProductSchema,
         response: {
           [StatusCodes.OK]: ProductSchema,
-          [StatusCodes.NOT_FOUND]: Type.Object(
-            {
-              code: Type.Literal("PRODUCT_NOT_FOUND"),
-              message: Type.String(),
-              field: Type.Optional(Type.String()),
-            },
-            { additionalProperties: false },
-          ),
+          ...commonErrorResponses,
+          ...notFoundResponse,
+          ...bodyErrorResponses,
         },
       },
     },
-    updateProductHandler,
+    controller.updateProductHandler,
   );
+
+  app.delete(
+    "/products/:id",
+    {
+      schema: {
+        params: idParamsSchema,
+        response: {
+          ...commonErrorResponses,
+          ...notFoundResponse,
+        },
+      },
+    },
+    controller.deleteProductHandler,
+  );
+
   app.post(
     "/products/search",
     {
@@ -144,9 +141,11 @@ export const productsRoutes: FastifyPluginAsyncTypebox = async (app) => {
         querystring: PaginationQuerySchema,
         response: {
           [StatusCodes.OK]: ProductsPageSchema,
+          ...commonErrorResponses,
+          ...bodyErrorResponses,
         },
       },
     },
-    searchProductsHandler,
+    controller.searchProductsHandler,
   );
 };
