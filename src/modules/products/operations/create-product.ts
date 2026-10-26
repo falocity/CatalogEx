@@ -15,5 +15,5 @@ export async function createProductHandler(
   return reply
     .code(StatusCodes.CREATED)
     .header("Location", `/products/${product.id}`)
-    .send(product);
+    .send(product.id);
 }

@@ -61,8 +61,7 @@ export async function getProductById(id: string): Promise<Product | undefined> {
   const [product] = await db
     .select(productSelection)
     .from(products)
-    .where(eq(products.id, id))
-    .limit(1);
+    .where(eq(products.id, id));
 
   return product ? toProduct(product) : undefined;
 }
