@@ -8,13 +8,15 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "typecheck": "tsc --noEmit",
-    "build": "tsc",
-    "start": "node dist/src/server.js",
+    "clean": "rimraf dist",
+    "prebuild": "npm run clean",
+    "build": "tsc --project tsconfig.build.json",
+    "start": "node dist/server.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "test": "node --import tsx --test src/db/product.integration.test.ts src/modules/products/products.integration.test.ts",
-    "test:db": "node --import tsx --test src/db/product.integration.test.ts",
-    "test:api": "node --import tsx --test src/modules/products/products.integration.test.ts"
+    "test": "node --import tsx --test \"src/**/*.test.ts\" \"tests/**/*.test.ts\"",
+    "test:db": "node --import tsx --test \"src/db/**/*.test.ts\" \"tests/integration/db/**/*.test.ts\"",
+    "test:api": "node --import tsx --test \"src/modules/**/*.integration.test.ts\" \"tests/integration/*.test.ts\""
   },
   "keywords": [],
   "author": "",
@@ -32,6 +34,7 @@
     "@types/node": "^22.20.5",
     "@types/pg": "^8.23.1",
     "drizzle-kit": "^0.31.11",
+    "rimraf": "^6.1.3",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }
