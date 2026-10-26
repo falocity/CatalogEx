@@ -4,6 +4,7 @@ import { StatusCodes } from "http-status-codes";
 import { AppError, ValidationError } from "../../errors.js";
 
 const POSTGRES_CHECK_VIOLATION = "23514";
+const POSTGRES_NUMERIC_OUT_OF_RANGE = "22003";
 
 export class ProductNotFoundError extends AppError {
   constructor() {
@@ -21,6 +22,17 @@ export class ProductNotFoundError extends AppError {
 export function rethrowProductDatabaseError(error: unknown): never {
   const databaseError =
     error instanceof DrizzleQueryError ? error.cause : error;
+
+  if (
+    databaseError instanceof DatabaseError &&
+    databaseError.code === POSTGRES_NUMERIC_OUT_OF_RANGE
+  ) {
+    throw new AppError(
+      "VALIDATION_ERROR",
+      "A numeric value is outside the supported storage range.",
+      StatusCodes.BAD_REQUEST,
+    );
+  }
 
   if (
     databaseError instanceof DatabaseError &&
