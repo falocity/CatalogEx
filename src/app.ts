@@ -1,14 +1,23 @@
 import Fastify from "fastify";
 import type { FastifyInstance, FastifyServerOptions } from "fastify";
 import { StatusCodes } from "http-status-codes";
-import { pool } from "./db/client.js";
+import { getConfig } from "./config.js";
+import { db, pool } from "./db/client.js";
 import { registerErrorHandler } from "./error-handler.js";
-import { productsRoutes } from "./modules/products/products.routes.js";
 import { healthRoutes } from "./modules/health/health.routes.js";
+import { areBoundingPolygonsValid } from "./modules/products/geometry.utils.js";
+import { createProductsController } from "./modules/products/products.controller.js";
+import { createProductsRepository } from "./modules/products/products.repository.js";
+import { productsRoutes } from "./modules/products/products.routes.js";
+import { createProductsService } from "./modules/products/products.service.js";
 
 export function buildApp(options: FastifyServerOptions = {}): FastifyInstance {
+  const config = getConfig();
+
   const app = Fastify({
-    logger: true,
+    logger: {
+      level: config.server.logLevel,
+    },
     ...options,
   });
 
@@ -32,7 +41,15 @@ export function buildApp(options: FastifyServerOptions = {}): FastifyInstance {
     }
   });
 
-  app.register(productsRoutes);
+  const repository = createProductsRepository(db, app.log);
+
+  const service = createProductsService(repository, app.log, (geometries) =>
+    areBoundingPolygonsValid(db, geometries),
+  );
+
+  const controller = createProductsController(service);
+
+  app.register(productsRoutes, { controller });
   app.register(healthRoutes);
 
   const handlePoolError = (error: Error): void => {
