@@ -1,22 +1,24 @@
 import type { FastifyInstance } from "fastify";
 import { StatusCodes } from "http-status-codes";
-import { DrizzleQueryError } from "drizzle-orm";
-import { DatabaseError } from "pg";
-import { ProductValidationError } from "./modules/products/product.validation.js";
+import { AppError } from "./errors.js";
 
 export function registerErrorHandler(app: FastifyInstance): void {
   app.setErrorHandler((error, request, reply) => {
-    if (error instanceof ProductValidationError) {
-      return reply.code(StatusCodes.BAD_REQUEST).send({
-        code: "VALIDATION_ERROR",
+    if (error instanceof AppError) {
+      request.log.warn({ code: error.code, field: error.field }, error.message);
+
+      return reply.code(error.statusCode).send({
+        code: error.code,
         message: error.message,
-        field: error.field,
+        ...(error.field === undefined ? {} : { field: error.field }),
       });
     }
 
     if (error instanceof Error && "statusCode" in error) {
       switch (error.statusCode) {
         case StatusCodes.BAD_REQUEST:
+          request.log.warn({ err: error }, "Request validation failed");
+
           return reply.code(StatusCodes.BAD_REQUEST).send({
             code: "VALIDATION_ERROR",
             message: error.message,
@@ -32,30 +34,6 @@ export function registerErrorHandler(app: FastifyInstance): void {
           return reply.code(StatusCodes.UNSUPPORTED_MEDIA_TYPE).send({
             code: "UNSUPPORTED_MEDIA_TYPE",
             message: "Content-Type must be application/json.",
-          });
-      }
-    }
-
-    const databaseError =
-      error instanceof DrizzleQueryError ? error.cause : error;
-
-    if (
-      databaseError instanceof DatabaseError &&
-      databaseError.code === "23514"
-    ) {
-      switch (databaseError.constraint) {
-        case "products_zoom_range_valid":
-          return reply.code(StatusCodes.BAD_REQUEST).send({
-            code: "VALIDATION_ERROR",
-            message: "minZoom must not exceed maxZoom.",
-            field: "minZoom",
-          });
-
-        case "products_bounding_polygon_valid":
-          return reply.code(StatusCodes.BAD_REQUEST).send({
-            code: "VALIDATION_ERROR",
-            message: "boundingPolygon must be a valid, nonempty geometry.",
-            field: "boundingPolygon",
           });
       }
     }
