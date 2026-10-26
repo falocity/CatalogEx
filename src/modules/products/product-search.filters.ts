@@ -32,9 +32,9 @@ export function buildProductSearchConditions(
   }
 
   const numericGroups = [
-    { operands: input.greaterThan, compare: gt },
+    { operands: input.greater, compare: gt },
     { operands: input.greaterEqual, compare: gte },
-    { operands: input.lessThan, compare: lt },
+    { operands: input.less, compare: lt },
     { operands: input.lessEqual, compare: lte },
   ];
 

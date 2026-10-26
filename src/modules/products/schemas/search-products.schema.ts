@@ -8,9 +8,9 @@ import {
 export const SearchProductsSchema = Type.Object(
   {
     equal: Type.Optional(EqualityOperandsSchema),
-    greaterThan: Type.Optional(NumericOperandsSchema),
+    greater: Type.Optional(NumericOperandsSchema),
     greaterEqual: Type.Optional(NumericOperandsSchema),
-    lessThan: Type.Optional(NumericOperandsSchema),
+    less: Type.Optional(NumericOperandsSchema),
     lessEqual: Type.Optional(NumericOperandsSchema),
 
     contains: Type.Optional(SpatialOperandsSchema),
