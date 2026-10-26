@@ -1,8 +1,10 @@
-import { and, asc, eq, getTableColumns, sql } from "drizzle-orm";
-import { db } from "../../db/client.js";
+import { asc, eq, getTableColumns } from "drizzle-orm";
+import type { FastifyBaseLogger } from "fastify";
+import type { Database } from "../../db/client.js";
 import { products } from "../../db/schema.js";
+import { geometryAsGeoJSON, geometryToSql } from "./geometry.utils.js";
 import { buildProductSearchConditions } from "./product-search.filters.js";
-import type { BoundingPolygon } from "./schemas/fields.schema.js";
+import { rethrowProductDatabaseError } from "./products.errors.js";
 import type { ProductsPage } from "./schemas/pagination.schema.js";
 import type { CreateProduct, Product } from "./schemas/product.schema.js";
 import type { SearchProductsInput } from "./schemas/search-products.schema.js";
@@ -10,13 +12,7 @@ import type { UpdateProduct } from "./schemas/update-product.schema.js";
 
 const productSelection = {
   ...getTableColumns(products),
-  boundingPolygon: sql<BoundingPolygon>`
-    ST_AsGeoJSON(
-      ST_ForcePolygonCCW(${products.boundingPolygon}),
-      15,
-      0
-    )::json
-  `,
+  boundingPolygon: geometryAsGeoJSON(products.boundingPolygon),
 };
 
 type ProductRow = Omit<Product, "description"> & {
@@ -29,54 +25,11 @@ function toProduct(row: ProductRow): Product {
   return description === null ? product : { ...product, description };
 }
 
-export async function createProduct(input: CreateProduct): Promise<Product> {
-  const [created] = await db
-    .insert(products)
-    .values({
-      name: input.name,
-      description: input.description ?? null,
-      boundingPolygon: sql`
-        ST_SetSRID(
-          ST_GeomFromGeoJSON(${JSON.stringify(input.boundingPolygon)}),
-          4326
-        )
-      `,
-      consumptionLink: input.consumptionLink,
-      productType: input.productType,
-      consumptionProtocol: input.consumptionProtocol,
-      resolutionBest: input.resolutionBest,
-      minZoom: input.minZoom,
-      maxZoom: input.maxZoom,
-    })
-    .returning(productSelection);
-
-  if (!created) {
-    throw new Error("Product insert returned no row");
-  }
-
-  return toProduct(created);
-}
-
-export async function getProductById(id: string): Promise<Product | undefined> {
-  const [product] = await db
-    .select(productSelection)
-    .from(products)
-    .where(eq(products.id, id));
-
-  return product ? toProduct(product) : undefined;
-}
-
-export async function listProducts(
+function toPage(
+  rows: ProductRow[],
   limit: number,
   offset: number,
-): Promise<ProductsPage> {
-  const rows = await db
-    .select(productSelection)
-    .from(products)
-    .orderBy(asc(products.id))
-    .limit(limit + 1)
-    .offset(offset);
-
+): ProductsPage {
   return {
     items: rows.slice(0, limit).map(toProduct),
     limit,
@@ -85,97 +38,125 @@ export async function listProducts(
   };
 }
 
-export async function updateProduct(
-  id: string,
-  input: UpdateProduct,
-): Promise<Product | undefined> {
-  const [updated] = await db
-    .update(products)
-    .set({
-      name: input.name,
-      description: input.description,
-      boundingPolygon:
-        input.boundingPolygon === undefined
-          ? undefined
-          : sql`
-              ST_SetSRID(
-                ST_GeomFromGeoJSON(
-                  ${JSON.stringify(input.boundingPolygon)}
-                ),
-                4326
-              )
-            `,
-      consumptionLink: input.consumptionLink,
-      productType: input.productType,
-      consumptionProtocol: input.consumptionProtocol,
-      resolutionBest: input.resolutionBest,
-      minZoom: input.minZoom,
-      maxZoom: input.maxZoom,
-    })
-    .where(eq(products.id, id))
-    .returning(productSelection);
+export function createProductsRepository(
+  db: Database,
+  logger: FastifyBaseLogger,
+) {
+  async function query<T>(
+    operation: string,
+    execute: () => PromiseLike<T>,
+  ): Promise<T> {
+    const started = performance.now();
 
-  return updated ? toProduct(updated) : undefined;
-}
+    try {
+      const result = await execute();
 
-export async function deleteProduct(id: string): Promise<boolean> {
-  const [deleted] = await db
-    .delete(products)
-    .where(eq(products.id, id))
-    .returning({ id: products.id });
+      logger.debug(
+        {
+          operation,
+          durationMs: performance.now() - started,
+          rowCount: Array.isArray(result) ? result.length : undefined,
+        },
+        "Product database query completed",
+      );
 
-  return deleted !== undefined;
-}
-
-export async function areBoundingPolygonsValid(
-  geometries: BoundingPolygon[],
-): Promise<boolean> {
-  if (geometries.length === 0) {
-    return true;
+      return result;
+    } catch (error) {
+      rethrowProductDatabaseError(error);
+    }
   }
 
-  const checks = geometries.map((geometry) => {
-    const operand = sql`
-      ST_SetSRID(
-        ST_GeomFromGeoJSON(${JSON.stringify(geometry)}),
-        4326
-      )
-    `;
-
-    return sql`
-      (
-        NOT ST_IsEmpty(${operand})
-        AND ST_IsValid(${operand})
-      )
-    `;
-  });
-
-  const result = await db.execute(sql`
-    SELECT ${and(...checks)} AS valid
-  `);
-
-  return result.rows[0]?.valid === true;
-}
-
-export async function searchProducts(
-  input: SearchProductsInput,
-  limit: number,
-  offset: number,
-): Promise<ProductsPage> {
-  const conditions = buildProductSearchConditions(input);
-
-  const rows = await db
-    .select(productSelection)
-    .from(products)
-    .where(conditions)
-    .orderBy(asc(products.id))
-    .limit(limit + 1)
-    .offset(offset);
-
   return {
-    items: rows.slice(0, limit).map(toProduct),
-    limit,
-    offset,
-    hasMore: rows.length > limit,
+    async createProduct(input: CreateProduct): Promise<Product> {
+      const [created] = await query("create", () =>
+        db
+          .insert(products)
+          .values({
+            ...input,
+            description: input.description ?? null,
+            boundingPolygon: geometryToSql(input.boundingPolygon),
+          })
+          .returning(productSelection),
+      );
+
+      if (!created) {
+        throw new Error("Product insert returned no row");
+      }
+
+      return toProduct(created);
+    },
+
+    async getProductById(id: string): Promise<Product | undefined> {
+      const [product] = await query("getById", () =>
+        db.select(productSelection).from(products).where(eq(products.id, id)),
+      );
+
+      return product ? toProduct(product) : undefined;
+    },
+
+    async listProducts(limit: number, offset: number): Promise<ProductsPage> {
+      const rows = await query("list", () =>
+        db
+          .select(productSelection)
+          .from(products)
+          .orderBy(asc(products.id))
+          .limit(limit + 1)
+          .offset(offset),
+      );
+
+      return toPage(rows, limit, offset);
+    },
+
+    async updateProduct(
+      id: string,
+      input: UpdateProduct,
+    ): Promise<Product | undefined> {
+      const [updated] = await query("update", () =>
+        db
+          .update(products)
+          .set({
+            ...input,
+            boundingPolygon:
+              input.boundingPolygon === undefined
+                ? undefined
+                : geometryToSql(input.boundingPolygon),
+          })
+          .where(eq(products.id, id))
+          .returning(productSelection),
+      );
+
+      return updated ? toProduct(updated) : undefined;
+    },
+
+    async deleteProduct(id: string): Promise<boolean> {
+      const [deleted] = await query("delete", () =>
+        db
+          .delete(products)
+          .where(eq(products.id, id))
+          .returning({ id: products.id }),
+      );
+
+      return deleted !== undefined;
+    },
+
+    async searchProducts(
+      input: SearchProductsInput,
+      limit: number,
+      offset: number,
+    ): Promise<ProductsPage> {
+      const rows = await query("search", () =>
+        db
+          .select(productSelection)
+          .from(products)
+          .where(buildProductSearchConditions(input))
+          .orderBy(asc(products.id))
+          .limit(limit + 1)
+          .offset(offset),
+      );
+
+      return toPage(rows, limit, offset);
+    },
   };
 }
+
+export type ProductsRepository = ReturnType<typeof createProductsRepository>;
