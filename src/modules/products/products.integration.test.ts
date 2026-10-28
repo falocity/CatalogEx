@@ -3,12 +3,14 @@ import { randomUUID } from "node:crypto";
 import { test } from "node:test";
 import { StatusCodes } from "http-status-codes";
 import { buildApp } from "../../app.js";
-import { pool } from "../../db/client.js";
+import type { Pool } from "pg";
+import { SERVICES } from "../../common/constants.js";
 import type { ProductsPage } from "./schemas/pagination.schema.js";
 import type { CreateProduct, Product } from "./schemas/product.schema.js";
 
 test("products API: CRUD and numeric search", async (t) => {
-  const app = buildApp({ logger: false });
+  const { app, container } = await buildApp({ logger: false });
+  const pool = container.resolve<Pool>(SERVICES.POOL);
   const name = `api-test-${randomUUID()}`;
 
   t.after(async () => {

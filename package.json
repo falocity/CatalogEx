@@ -1,4 +1,7 @@
 {
+  "engines": {
+    "node": ">=24 <25"
+  },
   "name": "catalogex",
   "version": "1.0.0",
   "description": "",
@@ -6,17 +9,18 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "node --env-file-if-exists=.env --import tsx --watch src/server.ts",
     "typecheck": "tsc --noEmit",
     "clean": "rimraf dist",
     "prebuild": "npm run clean",
     "build": "tsc --project tsconfig.build.json",
-    "start": "node dist/server.js",
+    "start": "node --env-file-if-exists=.env dist/server.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "test": "node --import tsx --test \"src/**/*.test.ts\" \"tests/**/*.test.ts\"",
-    "test:db": "node --import tsx --test \"src/db/**/*.test.ts\" \"tests/integration/db/**/*.test.ts\"",
-    "test:api": "node --import tsx --test \"src/modules/**/*.integration.test.ts\" \"tests/integration/*.test.ts\""
+    "test": "node --env-file-if-exists=.env --import tsx --test \"src/**/*.test.ts\" \"tests/**/*.test.ts\"",
+    "test:db": "node --env-file-if-exists=.env --import tsx --test \"src/db/**/*.test.ts\" \"tests/integration/db/**/*.test.ts\"",
+    "test:api": "node --env-file-if-exists=.env --import tsx --test \"src/modules/**/*.integration.test.ts\" \"tests/integration/*.test.ts\"",
+    "test:unit": "node --env-file-if-exists=.env --import tsx --test \"tests/unit/**/*.test.ts\""
   },
   "keywords": [],
   "author": "",

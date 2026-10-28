@@ -3,13 +3,15 @@ import { randomUUID } from "node:crypto";
 import { after, test } from "node:test";
 import { StatusCodes } from "http-status-codes";
 import { buildApp } from "../../src/app.js";
-import { pool } from "../../src/db/client.js";
+import type { Pool } from "pg";
+import { SERVICES } from "../../src/common/constants.js";
 import type {
   CreateProduct,
   Product,
 } from "../../src/modules/products/schemas/product.schema.js";
 
-const app = buildApp({ logger: false });
+const { app, container } = await buildApp({ logger: false });
+const pool = container.resolve<Pool>(SERVICES.POOL);
 const names = new Set<string>();
 
 function makeInput(): CreateProduct {

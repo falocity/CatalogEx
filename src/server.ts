@@ -1,49 +1,19 @@
 import { buildApp } from "./app.js";
-import { getConfig } from "./config.js";
+import type { ConfigType } from "./common/config.js";
+import { SERVICES } from "./common/constants.js";
+import { registerProcessLifecycle } from "./containerConfig.js";
 
-const app = buildApp();
-const config = getConfig();
-
-let shutdownStarted = false;
-
-async function shutdown(signal: NodeJS.Signals): Promise<void> {
-  if (shutdownStarted) {
-    return;
-  }
-
-  shutdownStarted = true;
-
-  app.log.info({ signal }, "Server shutting down");
-
-  const timeout = setTimeout(() => {
-    app.log.error("Graceful shutdown timed out");
-    process.exit(1);
-  }, config.server.shutdownTimeoutMs);
-
-  timeout.unref();
-
-  try {
-    await app.close();
-  } catch (error) {
-    app.log.error({ err: error }, "Server shutdown failed");
-    process.exitCode = 1;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-for (const signal of ["SIGINT", "SIGTERM"] as const) {
-  process.on(signal, () => {
-    void shutdown(signal);
-  });
-}
+const { app, container } = await buildApp();
+const config = container.resolve<ConfigType>(SERVICES.CONFIG);
+const removeHandlers = registerProcessLifecycle(app, config);
 
 try {
   await app.listen({
-    port: config.server.port,
-    host: config.server.host,
+    port: config.get("server.port"),
+    host: config.get("server.host"),
   });
 } catch (error) {
+  removeHandlers();
   app.log.error({ err: error }, "Server startup failed");
   process.exitCode = 1;
   await app.close();

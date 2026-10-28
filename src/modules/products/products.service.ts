@@ -12,11 +12,12 @@ import type { BoundingPolygon } from "./schemas/fields.schema.js";
 import type { CreateProduct } from "./schemas/product.schema.js";
 import type { UpdateProduct } from "./schemas/update-product.schema.js";
 import type { SearchProductsInput } from "./schemas/search-products.schema.js";
+import type { GeometryValidator } from "./geometry.utils.js";
 
 export function createProductsService(
   repository: ProductsRepository,
   logger: FastifyBaseLogger,
-  validateGeometries: (geometries: BoundingPolygon[]) => Promise<boolean>,
+  geometryValidator: GeometryValidator,
 ) {
   return {
     async createProduct(input: CreateProduct) {
@@ -83,7 +84,7 @@ export function createProductsService(
         }
       }
 
-      const geometriesValid = await validateGeometries(geometries);
+      const geometriesValid = await geometryValidator.areValid(geometries);
 
       if (!geometriesValid) {
         throw new ProductValidationError(

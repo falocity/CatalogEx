@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
-import { pool } from "./client.js";
+import { createPool } from "./client.js";
+import { initConfig, getConfig } from "../common/config.js";
+
+await initConfig();
+const pool = createPool(getConfig());
 
 after(async () => {
   await pool.end();

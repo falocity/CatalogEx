@@ -21,28 +21,31 @@ export function geometryAsGeoJSON(column: SQLWrapper): SQL<BoundingPolygon> {
   `;
 }
 
-export async function areBoundingPolygonsValid(
-  db: Database,
-  geometries: BoundingPolygon[],
-): Promise<boolean> {
-  if (geometries.length === 0) {
-    return true;
-  }
+export function createGeometryValidator(db: Database) {
+  return {
+    async areValid(geometries: BoundingPolygon[]): Promise<boolean> {
+      if (geometries.length === 0) {
+        return true;
+      }
 
-  const checks = geometries.map((geometry) => {
-    const operand = geometryToSql(geometry);
+      const checks = geometries.map((geometry) => {
+        const operand = geometryToSql(geometry);
 
-    return sql`
-      (
-        NOT ST_IsEmpty(${operand})
-        AND ST_IsValid(${operand})
-      )
-    `;
-  });
+        return sql`
+          (
+            NOT ST_IsEmpty(${operand})
+            AND ST_IsValid(${operand})
+          )
+        `;
+      });
 
-  const result = await db.execute(sql`
-    SELECT ${and(...checks)} AS valid
-  `);
+      const result = await db.execute(sql`
+        SELECT ${and(...checks)} AS valid
+      `);
 
-  return result.rows[0]?.valid === true;
+      return result.rows[0]?.valid === true;
+    },
+  };
 }
+
+export type GeometryValidator = ReturnType<typeof createGeometryValidator>;
