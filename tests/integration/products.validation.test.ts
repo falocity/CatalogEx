@@ -132,7 +132,6 @@ for (const field of ["minZoom", "maxZoom"] as const) {
           : {
               ...input,
               [field]: overflow,
-              // Keep zoom order valid so the database handles overflow.
               ...(field === "minZoom" ? { maxZoom: overflow } : {}),
             };
 

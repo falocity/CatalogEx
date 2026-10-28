@@ -64,7 +64,6 @@ test("products API: CRUD and numeric search", async (t) => {
   assert.equal(retrieval.statusCode, StatusCodes.OK, retrieval.body);
   assert.deepEqual(retrieval.json<Product>(), created);
 
-  // Search: equality AND numeric filtering, matching and nonmatching.
   for (const { threshold, expectedIds } of [
     { threshold: 0.25, expectedIds: [created.id] },
     { threshold: 1, expectedIds: [] },
