@@ -1,18 +1,24 @@
 services:
   db:
     image: postgis/postgis:17-3.5
+    command:
+      - postgres
+      - -p
+      - "${POSTGRES_CONTAINER_PORT:?POSTGRES_CONTAINER_PORT is required}"
     environment:
+      PGHOST: "${POSTGRES_HEALTH_HOST:?POSTGRES_HEALTH_HOST is required}"
+      PGPORT: "${POSTGRES_CONTAINER_PORT:?POSTGRES_CONTAINER_PORT is required}"
       POSTGRES_DB: "${POSTGRES_DB:?POSTGRES_DB is required}"
       POSTGRES_USER: "${POSTGRES_USER:?POSTGRES_USER is required}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
     ports:
-      - "127.0.0.1:${POSTGRES_PORT:-5436}:5432"
+      - "${POSTGRES_BIND_HOST:?POSTGRES_BIND_HOST is required}:${POSTGRES_PORT:?POSTGRES_PORT is required}:${POSTGRES_CONTAINER_PORT:?POSTGRES_CONTAINER_PORT is required}"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test:
         - CMD-SHELL
-        - pg_isready -h 127.0.0.1 -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
       interval: 5s
       timeout: 5s
       retries: 10
@@ -25,11 +31,11 @@ services:
       - .env
     environment:
       HOST: "0.0.0.0"
-      PORT: "${PORT:-3000}"
+      PORT: "${PORT:?PORT is required}"
       POSTGRES_HOST: db
-      POSTGRES_PORT: "5432"
+      POSTGRES_PORT: "${POSTGRES_CONTAINER_PORT:?POSTGRES_CONTAINER_PORT is required}"
     ports:
-      - "127.0.0.1:${PORT:-3000}:${PORT:-3000}"
+      - "${APP_BIND_HOST:?APP_BIND_HOST is required}:${PORT:?PORT is required}:${PORT:?PORT is required}"
     depends_on:
       db:
         condition: service_healthy
