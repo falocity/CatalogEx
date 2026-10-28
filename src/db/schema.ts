@@ -96,6 +96,8 @@ export const products = pgTable(
         AND ST_IsValid(${table.boundingPolygon})
       `,
     ),
+    index("products_product_type_btree").on(table.productType),
+    index("products_resolution_best_btree").on(table.resolutionBest),
     index("products_bounding_polygon_gist").using(
       "gist",
       table.boundingPolygon,
