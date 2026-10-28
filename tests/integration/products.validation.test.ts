@@ -51,9 +51,9 @@ async function store(input: CreateProduct): Promise<string> {
   assert.equal(response.statusCode, StatusCodes.CREATED, response.body);
 
   const { id } = response.json<{ id: string }>();
-  assert.equal(typeof id, "string")
+  assert.equal(typeof id, "string");
   assert.deepEqual(response.json(), { id });
-  
+
   return id;
 }
 
@@ -264,5 +264,26 @@ for (const operation of [
 
       assert.deepEqual(retrieval.json<Product>(), { ...input, id });
     }
+  });
+}
+
+for (const method of ["POST", "PATCH"] as const) {
+  test(`${method} rejects unsupported request media types`, async () => {
+    const response = await app.inject({
+      method,
+      url: method === "POST" ? "/products" : `/products/${randomUUID()}`,
+      headers: { "content-type": "text/plain" },
+      payload: "not JSON",
+    });
+
+    assert.equal(
+      response.statusCode,
+      StatusCodes.UNSUPPORTED_MEDIA_TYPE,
+      response.body,
+    );
+    assert.equal(
+      response.json<{ code: string }>().code,
+      "UNSUPPORTED_MEDIA_TYPE",
+    );
   });
 }
