@@ -6,6 +6,13 @@ import { AppError, ValidationError } from "../../errors.js";
 const POSTGRES_CHECK_VIOLATION = "23514";
 const POSTGRES_NUMERIC_OUT_OF_RANGE = "22003";
 
+export class ProductValidationError extends ValidationError {
+  constructor(field: string, message: string) {
+    super(field, message);
+    this.name = "ProductValidationError";
+  }
+}
+
 export class ProductNotFoundError extends AppError {
   constructor() {
     super(
@@ -40,13 +47,13 @@ export function rethrowProductDatabaseError(error: unknown): never {
   ) {
     switch (databaseError.constraint) {
       case "products_zoom_range_valid":
-        throw new ValidationError(
+        throw new ProductValidationError(
           "minZoom",
           "minZoom must not exceed maxZoom.",
         );
 
       case "products_bounding_polygon_valid":
-        throw new ValidationError(
+        throw new ProductValidationError(
           "boundingPolygon",
           "boundingPolygon must be a valid, nonempty geometry.",
         );

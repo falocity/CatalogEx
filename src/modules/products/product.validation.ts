@@ -1,14 +1,6 @@
-import { ValidationError } from "../../errors.js";
+import { ProductValidationError } from "./products.errors.js";
 import type { BoundingPolygon } from "./schemas/fields.schema.js";
 import type { CreateProduct } from "./schemas/product.schema.js";
-import type { UpdateProduct } from "./schemas/update-product.schema.js";
-
-export class ProductValidationError extends ValidationError {
-  constructor(field: string, message: string) {
-    super(field, message);
-    this.name = "ProductValidationError";
-  }
-}
 
 export function validateBoundingPolygon(geometry: BoundingPolygon): void {
   const polygons =
@@ -47,29 +39,7 @@ export function validateBoundingPolygon(geometry: BoundingPolygon): void {
   }
 }
 
-export function validateProductInput(input: CreateProduct): void {
-  if (input.minZoom > input.maxZoom) {
-    throw new ProductValidationError(
-      "minZoom",
-      "minZoom must not exceed maxZoom.",
-    );
-  }
-
-  validateBoundingPolygon(input.boundingPolygon);
-}
-
-export function validateProductUpdate(input: UpdateProduct): void {
-  if (
-    input.minZoom !== undefined &&
-    input.maxZoom !== undefined &&
-    input.minZoom > input.maxZoom
-  ) {
-    throw new ProductValidationError(
-      "minZoom",
-      "minZoom must not exceed maxZoom.",
-    );
-  }
-
+export function validateProductFields(input: Partial<CreateProduct>): void {
   if (input.boundingPolygon !== undefined) {
     validateBoundingPolygon(input.boundingPolygon);
   }

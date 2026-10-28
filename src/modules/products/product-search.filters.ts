@@ -1,37 +1,33 @@
 import { and, eq, gt, gte, lt, lte, sql, type SQL } from "drizzle-orm";
 import { products } from "../../db/schema.js";
 import { geometryToSql } from "./geometry.utils.js";
+import {
+  EQUALITY_FILTER_FIELDS,
+  NUMERIC_FILTER_FIELDS,
+} from "./schemas/filter-operators.schema.js";
 import type { SearchProductsInput } from "./schemas/search-products.schema.js";
+
+const numericFields = new Set<string>(NUMERIC_FILTER_FIELDS);
+
+const textEqualityFields = EQUALITY_FILTER_FIELDS.filter(
+  (field) => !numericFields.has(field),
+);
 
 export function buildProductSearchConditions(
   input: SearchProductsInput,
 ): SQL | undefined {
   const conditions: SQL[] = [];
 
-  const numericFields = ["resolutionBest", "minZoom", "maxZoom"] as const;
-
-  const equalityFields = [
-    "id",
-    "name",
-    "description",
-    "consumptionLink",
-    "productType",
-    "consumptionProtocol",
-    ...numericFields,
-  ] as const;
-
-  for (const field of equalityFields) {
+  for (const field of textEqualityFields) {
     const value = input.equal?.[field];
 
     if (value !== undefined) {
-      const operand =
-        typeof value === "number" ? sql`${value}::double precision` : value;
-
-      conditions.push(eq(products[field], operand));
+      conditions.push(eq(products[field], value));
     }
   }
 
   const numericGroups = [
+    { operands: input.equal, compare: eq },
     { operands: input.greater, compare: gt },
     { operands: input.greaterEqual, compare: gte },
     { operands: input.less, compare: lt },
@@ -39,7 +35,7 @@ export function buildProductSearchConditions(
   ];
 
   for (const { operands, compare } of numericGroups) {
-    for (const field of numericFields) {
+    for (const field of NUMERIC_FILTER_FIELDS) {
       const value = operands?.[field];
 
       if (value !== undefined) {
@@ -50,37 +46,23 @@ export function buildProductSearchConditions(
     }
   }
 
-  const contains = input.contains?.boundingPolygon;
+  const spatialGroups = [
+    { operands: input.contains, predicate: sql`ST_Contains` },
+    { operands: input.within, predicate: sql`ST_Within` },
+    { operands: input.intersects, predicate: sql`ST_Intersects` },
+  ];
 
-  if (contains !== undefined) {
-    conditions.push(
-      sql`ST_Contains(
-        ${products.boundingPolygon},
-        ${geometryToSql(contains)}
-      )`,
-    );
-  }
+  for (const { operands, predicate } of spatialGroups) {
+    const geometry = operands?.boundingPolygon;
 
-  const within = input.within?.boundingPolygon;
-
-  if (within !== undefined) {
-    conditions.push(
-      sql`ST_Within(
-        ${products.boundingPolygon},
-        ${geometryToSql(within)}
-      )`,
-    );
-  }
-
-  const intersects = input.intersects?.boundingPolygon;
-
-  if (intersects !== undefined) {
-    conditions.push(
-      sql`ST_Intersects(
-        ${products.boundingPolygon},
-        ${geometryToSql(intersects)}
-      )`,
-    );
+    if (geometry !== undefined) {
+      conditions.push(
+        sql`${predicate}(
+          ${products.boundingPolygon},
+          ${geometryToSql(geometry)}
+        )`,
+      );
+    }
   }
 
   return and(...conditions);

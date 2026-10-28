@@ -35,3 +35,14 @@ export const SpatialOperandsSchema = Type.Partial(SpatialFieldsSchema, {
   minProperties: 1,
   additionalProperties: false,
 });
+
+type NumericField = keyof typeof NumericFieldsSchema.properties;
+type EqualityField = keyof typeof EqualityFieldsSchema.properties;
+
+export const NUMERIC_FILTER_FIELDS = Object.keys(
+  NumericFieldsSchema.properties,
+) as NumericField[];
+
+export const EQUALITY_FILTER_FIELDS = Object.keys(
+  EqualityFieldsSchema.properties,
+) as EqualityField[];

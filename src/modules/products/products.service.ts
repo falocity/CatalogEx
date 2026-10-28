@@ -1,12 +1,13 @@
 import type { FastifyBaseLogger } from "fastify";
 
 import type { ProductsRepository } from "./products.repository.js";
-import { ProductNotFoundError } from "./products.errors.js";
 import {
+  ProductNotFoundError,
   ProductValidationError,
+} from "./products.errors.js";
+import {
   validateBoundingPolygon,
-  validateProductInput,
-  validateProductUpdate,
+  validateProductFields,
 } from "./product.validation.js";
 import type { BoundingPolygon } from "./schemas/fields.schema.js";
 import type { CreateProduct } from "./schemas/product.schema.js";
@@ -21,7 +22,7 @@ export function createProductsService(
 ) {
   return {
     async createProduct(input: CreateProduct) {
-      validateProductInput(input);
+      validateProductFields(input);
 
       const product = await repository.createProduct(input);
 
@@ -45,8 +46,8 @@ export function createProductsService(
     },
 
     async updateProduct(id: string, input: UpdateProduct) {
-      validateProductUpdate(input);
-
+      validateProductFields(input);
+      
       const product = await repository.updateProduct(id, input);
 
       if (!product) {

@@ -223,3 +223,45 @@ for (const kind of ["Polygon", "MultiPolygon"] as const) {
     });
   }
 }
+
+for (const operation of [
+  "create",
+  "update-both",
+  "update-min",
+  "update-max",
+] as const) {
+  test(`${operation} rejects invalid resulting zoom order`, async () => {
+    const input = { ...makeInput(), minZoom: 5 };
+
+    const id = operation === "create" ? undefined : await store(input);
+
+    const payload =
+      operation === "create"
+        ? { ...input, minZoom: 19 }
+        : operation === "update-both"
+          ? { minZoom: 19, maxZoom: 18 }
+          : operation === "update-min"
+            ? { minZoom: 19 }
+            : { maxZoom: 4 };
+
+    const response = await app.inject({
+      method: operation === "create" ? "POST" : "PATCH",
+      url: operation === "create" ? "/products" : `/products/${id}`,
+      payload,
+    });
+
+    const error = expectValidationError(response);
+    assert.equal(error.message, "minZoom must not exceed maxZoom.");
+
+    if (id !== undefined) {
+      const retrieval = await app.inject({
+        method: "GET",
+        url: `/products/${id}`,
+      });
+
+      assert.equal(retrieval.statusCode, StatusCodes.OK, retrieval.body);
+
+      assert.deepEqual(retrieval.json<Product>(), { ...input, id });
+    }
+  });
+}
