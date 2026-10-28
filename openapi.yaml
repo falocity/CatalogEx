@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Geospatial Products Catalog
-  version: 0.2.0
+  version: 0.3.0
   description: Draft contract for managing and searching geospatial products.
 servers:
   - url: /
@@ -17,10 +17,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Product"
+                $ref: "#/components/schemas/CreateProductResponse"
               examples:
                 example:
-                  $ref: "#/components/examples/Product"
+                  $ref: "#/components/examples/CreateProductResponse"
           headers:
             Location:
               required: true
@@ -286,6 +286,18 @@ components:
             message: An unexpected error occurred.
       description: Unexpected server error.
   schemas:
+    CreateProductResponse:
+      type: object
+      additionalProperties: false
+      required: [id]
+      properties:
+        id:
+          type: string
+          format: uuid
+
+    MinZoomLevel:
+      type: integer
+      minimum: 0
     ProductInput:
       type: object
       required:
@@ -324,7 +336,7 @@ components:
           minimum: 0
           description: Best spatial resolution of the product.
         minZoom:
-          $ref: "#/components/schemas/ZoomLevel"
+          $ref: "#/components/schemas/MinZoomLevel"
         maxZoom:
           $ref: "#/components/schemas/ZoomLevel"
       description: minZoom must not exceed maxZoom.
@@ -371,7 +383,7 @@ components:
           type: number
           minimum: 0
         minZoom:
-          $ref: "#/components/schemas/ZoomLevel"
+          $ref: "#/components/schemas/MinZoomLevel"
         maxZoom:
           $ref: "#/components/schemas/ZoomLevel"
       description: At least one editable field is required. Null values and id are not accepted.
@@ -554,8 +566,12 @@ components:
           type: string
           description: Input field associated with the error, when applicable.
   examples:
+    CreateProductResponse:
+      summary: Identifier of the created product
+      value:
+        id: 550e8400-e29b-41d4-a716-446655440000
     CreateProduct:
-      summary: Create a raster product
+      summary: retrieved product
       value:
         name: Ramla aerial imagery
         description: Example geospatial product

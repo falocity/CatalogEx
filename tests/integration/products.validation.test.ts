@@ -51,8 +51,9 @@ async function store(input: CreateProduct): Promise<string> {
   assert.equal(response.statusCode, StatusCodes.CREATED, response.body);
 
   const { id } = response.json<{ id: string }>();
-  assert.equal(typeof id, "string");
-
+  assert.equal(typeof id, "string")
+  assert.deepEqual(response.json(), { id });
+  
   return id;
 }
 

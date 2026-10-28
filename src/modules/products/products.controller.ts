@@ -1,7 +1,10 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { StatusCodes } from "http-status-codes";
 import type { ProductsService } from "./products.service.js";
-import type { CreateProduct, Product } from "./schemas/product.schema.js";
+import type {
+  CreateProduct,
+  ProductIdParams,
+} from "./schemas/product.schema.js";
 import type { UpdateProduct } from "./schemas/update-product.schema.js";
 import type { SearchProductsInput } from "./schemas/search-products.schema.js";
 import {
@@ -9,8 +12,6 @@ import {
   DEFAULT_PAGE_OFFSET,
   type PaginationQuery,
 } from "./schemas/pagination.schema.js";
-
-type ProductIdParams = Pick<Product, "id">;
 
 export function createProductsController(service: ProductsService) {
   return {
@@ -23,7 +24,7 @@ export function createProductsController(service: ProductsService) {
       return reply
         .code(StatusCodes.CREATED)
         .header("Location", `/products/${product.id}`)
-        .send(product);
+        .send({ id: product.id });
     },
 
     async getProductByIdHandler({

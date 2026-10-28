@@ -6,7 +6,11 @@ import { buildApp } from "../../app.js";
 import type { Pool } from "pg";
 import { SERVICES } from "../../common/constants.js";
 import type { ProductsPage } from "./schemas/pagination.schema.js";
-import type { CreateProduct, Product } from "./schemas/product.schema.js";
+import type {
+  CreateProduct,
+  CreateProductResponse,
+  Product,
+} from "./schemas/product.schema.js";
 
 test("products API: CRUD and numeric search", async (t) => {
   const { app, container } = await buildApp({ logger: false });
@@ -51,20 +55,23 @@ test("products API: CRUD and numeric search", async (t) => {
 
   assert.equal(creation.statusCode, StatusCodes.CREATED, creation.body);
 
-  const created = creation.json<Product>();
+  const created = creation.json<CreateProductResponse>();
   assert.match(
     created.id,
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
   );
   assert.equal(creation.headers.location, `/products/${created.id}`);
-  assert.deepEqual(created, { ...input, id: created.id });
+  assert.deepEqual(created, { id: created.id });
 
   const url = `/products/${created.id}`;
 
   const retrieval = await app.inject({ method: "GET", url });
 
   assert.equal(retrieval.statusCode, StatusCodes.OK, retrieval.body);
-  assert.deepEqual(retrieval.json<Product>(), created);
+  assert.deepEqual(retrieval.json<Product>(), {
+    ...input,
+    id: created.id,
+  });
 
   for (const { threshold, expectedIds } of [
     { threshold: 0.25, expectedIds: [created.id] },
@@ -93,10 +100,11 @@ test("products API: CRUD and numeric search", async (t) => {
   }
 
   const expectedUpdate = {
-    ...created,
+    ...input,
+    id: created.id,
     description: "Updated automatically",
   };
-
+  
   const update = await app.inject({
     method: "PATCH",
     url,

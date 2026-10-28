@@ -103,7 +103,7 @@ Base URL: http://127.0.0.1:3000. Send POST and PATCH bodies as JSON with
 Content-Type: application/json. See [openapi.yaml](./openapi.yaml) for the full
 contract.
 Method Path Result
-POST /products Creates a product; returns 201, the product, and a Location header.
+POST /products Creates a product; returns 201, { id }, and a Location header.
 GET /products Returns a page of products.
 GET /products/{id} Returns one product, or 404 if missing.
 PATCH /products/{id} Updates supplied fields and returns the product.
