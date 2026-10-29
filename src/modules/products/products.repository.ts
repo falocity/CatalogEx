@@ -6,7 +6,11 @@ import { geometryAsGeoJSON, geometryToSql } from "./geometry.utils.js";
 import { buildProductSearchConditions } from "./product-search.filters.js";
 import { rethrowProductDatabaseError } from "./products.errors.js";
 import type { ProductsPage } from "./schemas/pagination.schema.js";
-import type { CreateProduct, Product } from "./schemas/product.schema.js";
+import type {
+  CreateProduct,
+  Product,
+  CreateProductResponse,
+} from "./schemas/product.schema.js";
 import type { SearchProductsInput } from "./schemas/search-products.schema.js";
 import type { UpdateProduct } from "./schemas/update-product.schema.js";
 
@@ -67,7 +71,7 @@ export function createProductsRepository(
   }
 
   return {
-    async createProduct(input: CreateProduct): Promise<Product> {
+    async createProduct(input: CreateProduct): Promise<CreateProductResponse> {
       const [created] = await query("create", () =>
         db
           .insert(products)
@@ -76,14 +80,14 @@ export function createProductsRepository(
             description: input.description ?? null,
             boundingPolygon: geometryToSql(input.boundingPolygon),
           })
-          .returning(productSelection),
+          .returning({ id: products.id }),
       );
 
       if (!created) {
         throw new Error("Product insert returned no row");
       }
 
-      return toProduct(created);
+      return created;
     },
 
     async getProductById(id: string): Promise<Product | undefined> {
