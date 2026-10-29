@@ -21,6 +21,7 @@ ENV PORT=8080
 WORKDIR /usr/src/app
 
 COPY --chown=node:node package*.json ./
+COPY --chown=node:node .husky/install.mjs .husky/install.mjs
 RUN npm ci --omit=dev
 
 COPY --chown=node:node --from=build /tmp/buildApp/dist ./dist
@@ -31,4 +32,4 @@ USER node
 
 EXPOSE 8080
 
-CMD ["dumb-init", "node", "dist/server.js"]
+CMD ["dumb-init", "node", "--import", "./dist/instrumentation.mjs", "dist/server.js"]
