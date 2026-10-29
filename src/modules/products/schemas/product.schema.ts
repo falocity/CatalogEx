@@ -2,7 +2,7 @@ import Type from "typebox";
 import {
   BoundingPolygonSchema,
   ConsumptionProtocolSchema,
-  ConsumtionLinkSchema,
+  ConsumptionLinkSchema,
   MaxZoom,
   MinZoom,
   ProductDescriptionSchema,
@@ -17,7 +17,7 @@ export const ProductSchema = Type.Object({
   name: ProductNameSchema,
   description: Type.Optional(ProductDescriptionSchema),
   boundingPolygon: BoundingPolygonSchema,
-  consumptionLink: ConsumtionLinkSchema,
+  consumptionLink: ConsumptionLinkSchema,
   productType: ProductTypeSchema,
   consumptionProtocol: ConsumptionProtocolSchema,
   resolutionBest: ResolutionBestSchema,
@@ -25,8 +25,25 @@ export const ProductSchema = Type.Object({
   maxZoom: MaxZoom,
 });
 
-export const CreateProductSchemaInput = Type.Omit(ProductSchema, ["id"]);
+export const CreateProductSchemaInput = Type.Omit(ProductSchema, ["id"], {
+  additionalProperties: false,
+});
+
+export const ProductIdParamsSchema = Type.Object(
+  { id: ProductIdSchema },
+  { additionalProperties: false },
+);
+
+export const CreateProductResponseSchema = Type.Pick(ProductSchema, ["id"], {
+  additionalProperties: false,
+});
 
 export type Product = Type.Static<typeof ProductSchema>;
 
 export type CreateProduct = Type.Static<typeof CreateProductSchemaInput>;
+
+export type ProductIdParams = Type.Static<typeof ProductIdParamsSchema>;
+
+export type CreateProductResponse = Type.Static<
+  typeof CreateProductResponseSchema
+>;

@@ -1,34 +1,23 @@
-import Fastify from "fastify";
-import type { FastifyInstance } from "fastify";
+import type { FastifyServerOptions } from "fastify";
+import type { Pool } from "pg";
+import { SERVICES } from "./common/constants.js";
+import {
+  registerExternalValues,
+  type RegisterOptions,
+} from "./containerConfig.js";
+import { ServerBuilder } from "./serverBuilder.js";
 
-export function buildApp(): FastifyInstance {
-  const app = Fastify({
-    logger: true,
-  });
+export async function buildApp(
+  options: FastifyServerOptions = {},
+  registerOptions: RegisterOptions = {},
+) {
+  const container = await registerExternalValues(registerOptions);
 
-  app.get(
-    "/health",
-    {
-      schema: {
-        response: {
-          200: {
-            type: "object",
-            properties: {
-              status: {
-                type: "string",
-                enum: ["ok"],
-              },
-            },
-            required: ["status"],
-            additionalProperties: false,
-          },
-        },
-      },
-    },
-    async () => {
-      return { status: "ok" };
-    },
-  );
-
-  return app;
+  try {
+    const app = container.resolve(ServerBuilder).build(options);
+    return { app, container };
+  } catch (error) {
+    await container.resolve<Pool>(SERVICES.POOL).end();
+    throw error;
+  }
 }

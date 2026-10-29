@@ -1,0 +1,7 @@
+{
+  "telemetry": {
+    "logger": {
+      "level": "fatal"
+    }
+  }
+}

@@ -1,0 +1,58 @@
+services:
+  db:
+    image: postgis/postgis:17-3.5
+    command:
+      - postgres
+      - -p
+      - "${POSTGRES_CONTAINER_PORT:?POSTGRES_CONTAINER_PORT is required}"
+    environment:
+      PGHOST: "${POSTGRES_HEALTH_HOST:?POSTGRES_HEALTH_HOST is required}"
+      PGPORT: "${POSTGRES_CONTAINER_PORT:?POSTGRES_CONTAINER_PORT is required}"
+      POSTGRES_DB: "${POSTGRES_DB:?POSTGRES_DB is required}"
+      POSTGRES_USER: "${POSTGRES_USER:?POSTGRES_USER is required}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+    ports:
+      - "${POSTGRES_BIND_HOST:?POSTGRES_BIND_HOST is required}:${POSTGRES_PORT:?POSTGRES_PORT is required}:${POSTGRES_CONTAINER_PORT:?POSTGRES_CONTAINER_PORT is required}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  app:
+    image: catalogex:local
+    build: .
+    env_file:
+      - .env
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "${PORT:?PORT is required}"
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "${POSTGRES_CONTAINER_PORT:?POSTGRES_CONTAINER_PORT is required}"
+    ports:
+      - "${APP_BIND_HOST:?APP_BIND_HOST is required}:${PORT:?PORT is required}:${PORT:?PORT is required}"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          fetch('http://127.0.0.1:' + process.env.PORT + '/health/ready')
+          .then(response => process.exit(response.ok ? 0 : 1))
+          .catch(() => process.exit(1))
+      interval: 10s
+      timeout: 7s
+      retries: 3
+      start_period: 10s
+    stop_grace_period: 15s
+
+volumes:
+  postgres_data:
