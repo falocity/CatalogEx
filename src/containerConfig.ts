@@ -1,10 +1,14 @@
 import { jsLogger } from "@map-colonies/js-logger";
-import type { FastifyBaseLogger, FastifyInstance } from "fastify";
+import { getOtelMixin } from "@map-colonies/tracing-utils";
+import { trace } from "@opentelemetry/api";
+import { Registry } from "prom-client";
+import type { FastifyBaseLogger } from "fastify";
 import type { Pool } from "pg";
 import type { DependencyContainer } from "tsyringe";
 
-import { getConfig, initConfig, type ConfigType } from "./common/config.js";
+import { getConfig, type ConfigType } from "./common/config.js";
 import { SERVICES } from "./common/constants.js";
+import { getTracing } from "./common/tracing.js";
 import {
   cachedFactory,
   registerDependencies,
@@ -37,23 +41,21 @@ import { ServerBuilder } from "./serverBuilder.js";
 
 export interface RegisterOptions {
   config?: ConfigType;
-  loggerEnabled?: boolean;
   override?: InjectionObject<unknown>[];
 }
 
 export async function registerExternalValues(
   options: RegisterOptions = {},
 ): Promise<DependencyContainer> {
-  if (!options.config) {
-    await initConfig();
-  }
-
   const config = options.config ?? getConfig();
 
   const logger = await jsLogger({
     ...config.get("telemetry.logger"),
-    enabled: options.loggerEnabled ?? true,
+    mixin: getOtelMixin(),
   });
+
+  const metrics = new Registry();
+  config.initializeMetrics(metrics);
 
   const dependencies: InjectionObject<unknown>[] = [
     {
@@ -63,6 +65,24 @@ export async function registerExternalValues(
     {
       token: SERVICES.LOGGER,
       provider: { useValue: logger },
+    },
+    {
+      token: SERVICES.TRACER,
+      provider: {
+        useValue: trace.getTracer(config.get("telemetry.shared.serviceName")),
+      },
+    },
+    {
+      token: SERVICES.METRICS,
+      provider: { useValue: metrics },
+    },
+    {
+      token: SERVICES.ON_SIGNAL,
+      provider: {
+        useValue: async (): Promise<void> => {
+          await getTracing().stop();
+        },
+      },
     },
     {
       token: SERVICES.POOL,
@@ -153,54 +173,4 @@ export async function registerExternalValues(
   ];
 
   return registerDependencies(dependencies, options.override);
-}
-
-export function registerProcessLifecycle(
-  app: FastifyInstance,
-  config: ConfigType,
-) {
-  let shutdownStarted = false;
-  const handlers = new Map<NodeJS.Signals, () => void>();
-
-  const removeHandlers = () => {
-    for (const [signal, handler] of handlers) {
-      process.off(signal, handler);
-    }
-  };
-
-  async function shutdown(signal: NodeJS.Signals): Promise<void> {
-    if (shutdownStarted) {
-      return;
-    }
-
-    shutdownStarted = true;
-    app.log.info({ signal }, "Server shutting down");
-
-    const timeout = setTimeout(() => {
-      app.log.error("Graceful shutdown timed out");
-      process.exit(1);
-    }, config.get("server.shutdownTimeoutMs"));
-
-    timeout.unref();
-
-    try {
-      await app.close();
-      clearTimeout(timeout);
-      removeHandlers();
-    } catch (error) {
-      app.log.error({ err: error }, "Server shutdown failed");
-      process.exitCode = 1;
-    }
-  }
-
-  for (const signal of ["SIGINT", "SIGTERM"] as const) {
-    const handler = () => {
-      void shutdown(signal);
-    };
-
-    handlers.set(signal, handler);
-    process.on(signal, handler);
-  }
-
-  return removeHandlers;
 }
