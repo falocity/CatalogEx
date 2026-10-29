@@ -3,6 +3,7 @@ FROM node:24 AS build
 WORKDIR /tmp/buildApp
 
 COPY package*.json ./
+COPY .husky/ .husky/
 RUN npm ci
 
 COPY . .
