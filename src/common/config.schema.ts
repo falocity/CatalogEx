@@ -1,6 +1,6 @@
 import Type from "typebox";
 import schemas from "@map-colonies/schemas";
-import type { commonTelemetryLoggerV2Type } from "@map-colonies/schemas";
+import type { commonBoilerplateV3Type } from "@map-colonies/schemas";
 import type { typeSymbol } from "@map-colonies/schemas/build/schemas/symbol.js";
 
 function stringSetting(environmentVariable: string) {
@@ -35,13 +35,8 @@ const schema = Type.Object(
       { additionalProperties: false },
     ),
 
-    telemetry: Type.Object(
-      {
-        logger: Type.Unsafe<commonTelemetryLoggerV2Type>({
-          $ref: schemas.commonTelemetryLoggerV2.$id,
-        }),
-      },
-      { additionalProperties: false },
+    telemetry: Type.Unsafe<commonBoilerplateV3Type["telemetry"]>(
+      schemas.commonBoilerplateV3.properties.telemetry,
     ),
 
     database: Type.Object(
@@ -51,9 +46,9 @@ const schema = Type.Object(
         database: stringSetting("POSTGRES_DB"),
         user: stringSetting("POSTGRES_USER"),
         password: stringSetting("POSTGRES_PASSWORD"),
-        max: integerSetting("DB_POOL_MAX", 1),
-        idleTimeoutMillis: integerSetting("DB_IDLE_TIMEOUT_MS", 0),
-        connectionTimeoutMillis: integerSetting("DB_CONNECTION_TIMEOUT_MS", 1),
+        maxConnections: integerSetting("DB_POOL_MAX", 1),
+        idleTimeoutMs: integerSetting("DB_IDLE_TIMEOUT_MS", 0),
+        connectionTimeoutMs: integerSetting("DB_CONNECTION_TIMEOUT_MS", 1),
       },
       { additionalProperties: false },
     ),
@@ -72,6 +67,7 @@ const schema = Type.Object(
 );
 
 export type AppConfig = Type.Static<typeof schema>;
+
 export const AppConfigSchema = schema as typeof schema & {
   readonly $id: string;
   readonly [typeSymbol]: AppConfig;

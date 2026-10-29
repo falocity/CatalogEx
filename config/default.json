@@ -5,6 +5,13 @@
     "shutdownTimeoutMs": 10000
   },
   "telemetry": {
+    "shared": {
+      "serviceName": "catalogex"
+    },
+    "tracing": {
+      "isEnabled": false
+    },
+    "metrics": {},
     "logger": {
       "level": "info",
       "prettyPrint": false
@@ -14,9 +21,9 @@
     "host": "127.0.0.1",
     "port": 5432,
     "database": "catalog",
-    "max": 10,
-    "idleTimeoutMillis": 30000,
-    "connectionTimeoutMillis": 5000
+    "maxConnections": 10,
+    "idleTimeoutMs": 30000,
+    "connectionTimeoutMs": 5000
   },
   "readiness": {
     "queryTimeoutMs": 1000

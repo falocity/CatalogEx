@@ -3,7 +3,18 @@ import { Pool } from "pg";
 import type { ConfigType } from "../common/config.js";
 
 export function createPool(config: ConfigType): Pool {
-  return new Pool(config.get("database"));
+  const database = config.get("database");
+
+  return new Pool({
+    host: database.host,
+    port: database.port,
+    database: database.database,
+    user: database.user,
+    password: database.password,
+    max: database.maxConnections,
+    idleTimeoutMillis: database.idleTimeoutMs,
+    connectionTimeoutMillis: database.connectionTimeoutMs,
+  });
 }
 
 export function createDatabase(pool: Pool) {
