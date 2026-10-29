@@ -11,14 +11,10 @@ export async function buildApp(
   options: FastifyServerOptions = {},
   registerOptions: RegisterOptions = {},
 ) {
-  const container = await registerExternalValues({
-    ...registerOptions,
-    loggerEnabled: options.logger !== false,
-  });
+  const container = await registerExternalValues(registerOptions);
 
   try {
     const app = container.resolve(ServerBuilder).build(options);
-
     return { app, container };
   } catch (error) {
     await container.resolve<Pool>(SERVICES.POOL).end();
