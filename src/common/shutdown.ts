@@ -7,27 +7,32 @@ export function registerShutdown(
   timeoutMs: number,
 ): () => void {
   const registry = new CleanupRegistry({ overallTimeout: timeoutMs });
+  let cleanupPromise: Promise<void> | undefined;
 
-  // app.close() runs the onClose hook that ends the database pool.
   registry.register({
     id: "application",
-    func: async () => {
-      try {
-        await app.close();
-      } finally {
-        await onSignal();
-      }
+    func: () => {
+      cleanupPromise ??= (async () => {
+        try {
+          await app.close();
+        } finally {
+          await onSignal();
+        }
+      })();
+
+      return cleanupPromise;
     },
   });
 
   registry.on("finished", (status) => {
     if (status !== "success") {
       app.log.error({ status }, "Server shutdown did not complete");
-      process.exitCode = 1;
+      process.exit(1);
     }
   });
 
   let shuttingDown = false;
+  let watchdog: ReturnType<typeof setTimeout> | undefined;
 
   const removeHandlers = () => {
     process.off("SIGINT", onInterrupt);
@@ -36,17 +41,25 @@ export function registerShutdown(
 
   const handleSignal = (signal: NodeJS.Signals) => {
     if (shuttingDown) return;
-
     shuttingDown = true;
+
     app.log.info({ signal }, "Server shutting down");
+
+    watchdog = setTimeout(() => {
+      app.log.error("Server shutdown deadline exceeded");
+      process.exit(1);
+    }, timeoutMs + 1000);
 
     void registry
       .trigger()
       .catch((error: unknown) => {
         app.log.error({ err: error }, "Server shutdown failed");
-        process.exitCode = 1;
+        process.exit(1);
       })
-      .finally(removeHandlers);
+      .finally(() => {
+        if (watchdog) clearTimeout(watchdog);
+        removeHandlers();
+      });
   };
 
   const onInterrupt = () => handleSignal("SIGINT");
