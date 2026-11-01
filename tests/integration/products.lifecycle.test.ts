@@ -2,15 +2,15 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { test } from "node:test";
 import { StatusCodes } from "http-status-codes";
-import { buildApp } from "../../app.js";
+import { buildApp } from "../../src/app.js";
 import type { Pool } from "pg";
-import { SERVICES } from "../../common/constants.js";
-import type { ProductsPage } from "./schemas/pagination.schema.js";
+import { SERVICES } from "../../src/common/constants.js";
+import type { ProductsPage } from "../../src/modules/products/schemas/pagination.schema.js";
 import type {
   CreateProduct,
   CreateProductResponse,
   Product,
-} from "./schemas/product.schema.js";
+} from "../../src/modules/products/schemas/product.schema.js";
 
 test("products API: CRUD and numeric search", async (t) => {
   const { app, container } = await buildApp({ logger: false });
