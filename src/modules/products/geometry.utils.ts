@@ -1,6 +1,9 @@
-import { and, sql, type SQL, type SQLWrapper } from "drizzle-orm";
-import type { Database } from "../../db/client.js";
-import type { BoundingPolygon } from "./schemas/fields.schema.js";
+import { and, sql, type SQL, type SQLWrapper } from 'drizzle-orm';
+import { inject, injectable } from 'tsyringe';
+
+import { SERVICES } from '../../common/constants.js';
+import type { Database } from '../../db/client.js';
+import type { BoundingPolygon } from './schemas/fields.schema.js';
 
 export function geometryToSql(geometry: BoundingPolygon): SQL {
   return sql`
@@ -21,31 +24,30 @@ export function geometryAsGeoJSON(column: SQLWrapper): SQL<BoundingPolygon> {
   `;
 }
 
-export function createGeometryValidator(db: Database) {
-  return {
-    async areValid(geometries: BoundingPolygon[]): Promise<boolean> {
-      if (geometries.length === 0) {
-        return true;
-      }
+@injectable()
+export class GeometryValidator {
+  public constructor(@inject(SERVICES.DATABASE) private readonly db: Database) {}
 
-      const checks = geometries.map((geometry) => {
-        const operand = geometryToSql(geometry);
+  public async areValid(geometries: BoundingPolygon[]): Promise<boolean> {
+    if (geometries.length === 0) {
+      return true;
+    }
 
-        return sql`
-          (
-            NOT ST_IsEmpty(${operand})
-            AND ST_IsValid(${operand})
-          )
-        `;
-      });
+    const checks = geometries.map((geometry) => {
+      const operand = geometryToSql(geometry);
 
-      const result = await db.execute(sql`
-        SELECT ${and(...checks)} AS valid
-      `);
+      return sql`
+        (
+          NOT ST_IsEmpty(${operand})
+          AND ST_IsValid(${operand})
+        )
+      `;
+    });
 
-      return result.rows[0]?.valid === true;
-    },
-  };
+    const result = await this.db.execute(sql`
+      SELECT ${and(...checks)} AS valid
+    `);
+
+    return result.rows[0]?.valid === true;
+  }
 }
-
-export type GeometryValidator = ReturnType<typeof createGeometryValidator>;

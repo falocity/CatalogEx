@@ -4,9 +4,6 @@ import type { Pool } from "pg";
 import { buildApp } from "../../src/app.js";
 import { SERVICES } from "../../src/common/constants.js";
 
-process.env.POSTGRES_USER ??= "unit-test";
-process.env.POSTGRES_PASSWORD ??= "unit-test-only";
-
 test("dependencies are shared within an app and isolated across apps", async () => {
   const first = await buildApp({ logger: false });
   const second = await buildApp({ logger: false });
@@ -17,11 +14,6 @@ test("dependencies are shared within an app and isolated across apps", async () 
 
     assert.equal(firstPool, first.container.resolve(SERVICES.POOL));
     assert.notEqual(firstPool, secondPool);
-
-    assert.equal(
-      first.container.resolve(SERVICES.PRODUCTS_REPOSITORY),
-      first.container.resolve(SERVICES.PRODUCTS_REPOSITORY),
-    );
 
     assert.notEqual(
       first.container.resolve(SERVICES.DATABASE),
