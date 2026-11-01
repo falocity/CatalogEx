@@ -10,9 +10,8 @@ Configuration comes from `config/default.json` with environment overrides. The a
 
 ## Requirements
 
-- Node.js 24 and npm (`.nvmrc` specifies the major version).
-- Docker and Docker Compose v2 for the supplied local database.
-- PostgreSQL 17 with PostGIS 3.5, provided by `compose.yaml`.
+- Node.js 24 and npm (`.nvmrc` specifies the Node version).
+- PostgreSQL 17 with PostGIS 3.5. Docker is optional if you run the database locally.
 
 ## Local setup
 
@@ -22,32 +21,40 @@ Configuration comes from `config/default.json` with environment overrides. The a
    npm ci
    ```
 
-2. Create a private environment file:
-
-   ```bash
-   cp .env.example .env
-   ```
-
-   Set a nonempty `POSTGRES_PASSWORD` in `.env`. Do not commit this file. The example publishes PostgreSQL on `127.0.0.1:5436`; change `POSTGRES_PORT` if that host port is occupied. The database container uses `POSTGRES_CONTAINER_PORT` internally.
-
-   `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_PORT` configure the local database connection. `POSTGRES_BIND_HOST` controls where its port is published. `APP_BIND_HOST` and `PORT` control the Compose application's published address and port. Other defaults, including pool size and timeouts, are in `config/default.json`; see `src/common/config.schema.ts` for their environment override names.
-
-3. Start PostgreSQL/PostGIS and apply migrations:
+2. Start a PostgreSQL/PostGIS database. If you already use a private local `compose.yaml`, you can start its database with:
 
    ```bash
    docker compose up -d --wait db
-   npm run db:migrate
    ```
 
-4. Start the API:
+   Compose is a local development option; its file is not included in this repository.
+
+3. Create `config/local.json` with credentials for that database:
+
+   ```json
+   {
+     "database": {
+       "host": "127.0.0.1",
+       "port": 5436,
+       "database": "catalog",
+       "user": "catalogAdmin",
+       "password": "your-private-password"
+     }
+   }
+   ```
+
+   Adjust the values to match your database. This file is ignored by Git. Shared, non-secret settings live in `config/default.json`; `src/common/config.schema.ts` defines the configuration and supported environment overrides. Do not put passwords in `default.json`.
+
+4. Apply migrations and start the API:
 
    ```bash
+   npm run db:migrate
    npm run dev
    ```
 
-   It listens on `127.0.0.1:8080` by default. If that port is occupied, start it with `PORT=18080 npm run dev` and use port 18080 in the examples below.
+   The API listens on `127.0.0.1:8080` by default. If that port is occupied, use `PORT=18080 npm run dev`.
 
-5. Check the service and run the tests:
+5. Check the service and run the project checks:
 
    ```bash
    curl -i http://127.0.0.1:8080/health/live
@@ -57,9 +64,7 @@ Configuration comes from `config/default.json` with environment overrides. The a
    npm test
    ```
 
-   Tests include unit and database-backed integration cases. Run migrations before the integration tests. For a clean database, use a separate test database and apply the same migrations there.
-
-To stop the local database while retaining its data, run `docker compose down`. Changing the database initialization credentials in `.env` does not update credentials already stored in an existing Docker volume.
+   Integration tests need a migrated PostgreSQL/PostGIS database. A separate test database is recommended.
 
 ## API examples
 
