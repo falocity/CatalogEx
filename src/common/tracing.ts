@@ -24,3 +24,7 @@ export function getTracing(): Tracing {
 
   return tracing;
 }
+
+export async function stopTracing(): Promise<void> {
+  await tracing?.stop();
+}

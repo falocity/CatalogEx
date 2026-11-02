@@ -32,4 +32,4 @@ USER node
 
 EXPOSE 8080
 
-CMD ["dumb-init", "node", "--import", "./dist/instrumentation.mjs", "dist/server.js"]
+CMD ["dumb-init", "node", "--import", "./dist/instrumentation.mjs", "dist/index.js"]

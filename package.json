@@ -1,7 +1,4 @@
 {
-  "engines": {
-    "node": ">=24 <25"
-  },
   "name": "catalogex",
   "version": "1.0.0",
   "description": "",
@@ -9,8 +6,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "node --import tsx --import ./src/instrumentation.mts --watch src/server.ts",
-    "start": "node --import ./dist/instrumentation.mjs dist/server.js",
+    "dev": "node --import tsx --import ./src/instrumentation.mts --watch src/index.ts",
+    "start": "node --import ./dist/instrumentation.mjs dist/index.js",
     "typecheck": "tsc --noEmit",
     "clean": "rimraf dist",
     "prebuild": "npm run clean",
@@ -20,7 +17,7 @@
     "db:migrate": "node --import tsx src/db/migrate.ts",
     "db:migrate:prod": "node dist/db/migrate.js",
     "test": "node --import tsx --import ./tests/setup.mts --test \"src/**/*.test.ts\" \"tests/**/*.test.ts\"",
-    "test:db": "node --import tsx --import ./tests/setup.mts --test \"src/db/**/*.test.ts\" \"tests/integration/db/**/*.test.ts\"",
+    "test:db": "node --import tsx --import ./tests/setup.mts --test \"tests/integration/products.geometry.test.ts\"",
     "test:api": "node --import tsx --import ./tests/setup.mts --test \"src/modules/**/*.integration.test.ts\" \"tests/integration/*.test.ts\"",
     "test:unit": "node --import tsx --import ./tests/setup.mts --test \"tests/unit/**/*.test.ts\""
   },
