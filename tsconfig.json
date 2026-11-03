@@ -23,5 +23,12 @@
     "moduleDetection": "force",
     "skipLibCheck": true
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "drizzle.config.ts", "tests/**/*.mts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.mts",
+    "tests/**/*.ts",
+    "tests/**/*.mts",
+    "drizzle.config.ts",
+    "vitest.config.mts"
+  ]
 }

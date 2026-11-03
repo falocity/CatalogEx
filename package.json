@@ -16,10 +16,11 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --import tsx src/db/migrate.ts",
     "db:migrate:prod": "node dist/db/migrate.js",
-    "test": "node --import tsx --import ./tests/setup.mts --test \"tests/**/*.test.ts\"",
-    "test:api": "node --import tsx --import ./tests/setup.mts --test \"tests/integration/*.test.ts\"",
-    "test:db": "node --import tsx --import ./tests/setup.mts --test \"tests/integration/products.geometry.test.ts\"",
-    "test:unit": "node --import tsx --import ./tests/setup.mts --test \"tests/unit/**/*.test.ts\""
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "test:db": "vitest run --coverage.enabled=false tests/integration/products.integration.test.ts -t 'product footprint API'",
+    "test:api": "vitest run --project integration",
+    "test:unit": "vitest run --project unit"
   },
   "keywords": [],
   "author": "",
@@ -50,6 +51,8 @@
     "@map-colonies/prettier-config": "^1.0.0",
     "@types/node": "^22.20.5",
     "@types/pg": "^8.23.1",
+    "@vitest/coverage-v8": "^4.1.12",
+    "@vitest/ui": "^4.1.12",
     "drizzle-kit": "^0.31.11",
     "eslint": "^10.14.0",
     "fast-check": "^4.10.2",
@@ -57,6 +60,7 @@
     "prettier": "^3.9.10",
     "rimraf": "^6.1.3",
     "tsx": "^4.23.15",
-    "typescript": "~5.9.3"
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.12"
   }
 }
