@@ -1,6 +1,5 @@
-import assert from "node:assert/strict";
-import { test } from "node:test";
 import fc from "fast-check";
+import { expect, test } from "vitest";
 import { validateBoundingPolygon } from "../../src/modules/products/product.validation.js";
 import { ProductValidationError } from "../../src/modules/products/products.errors.js";
 
@@ -37,14 +36,14 @@ const polygons = fc
 test("closed rectangles pass structural validation in XY and XYZ", () => {
   fc.assert(
     fc.property(polygons, (polygon) => {
-      assert.doesNotThrow(() => validateBoundingPolygon(polygon));
+      expect(() => validateBoundingPolygon(polygon)).not.toThrow();
 
-      assert.doesNotThrow(() =>
+      expect(() =>
         validateBoundingPolygon({
           type: "MultiPolygon",
           coordinates: [polygon.coordinates],
         }),
-      );
+      ).not.toThrow();
     }),
     { numRuns: 50 },
   );
@@ -60,8 +59,7 @@ test("breaking a generated ring closure causes validation failure", () => {
         coordinates: [[...ring.slice(0, -1), ring[1]!]],
       };
 
-      assert.throws(
-        () => validateBoundingPolygon(openPolygon),
+      expect(() => validateBoundingPolygon(openPolygon)).toThrow(
         ProductValidationError,
       );
     }),

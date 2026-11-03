@@ -1,8 +1,6 @@
-import assert from "node:assert/strict";
-import { test } from "node:test";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { DatabaseError } from "pg";
-
+import { describe, expect, it } from "vitest";
 import { buildProductSearchConditions } from "../../src/modules/products/product-search.filters.js";
 import {
   validateBoundingPolygon,
@@ -33,146 +31,164 @@ const dialect = new PgDialect();
 
 function query(input: SearchProductsInput) {
   const conditions = buildProductSearchConditions(input);
-  assert.ok(conditions);
+  if (conditions === undefined) {
+    throw new Error("Expected search conditions");
+  }
   return dialect.sqlToQuery(conditions);
 }
 
-test("geometry validation accepts closed XY and XYZ polygons and multipolygons", () => {
-  const cases: BoundingPolygon[] = [
-    polygon,
-    { type: "Polygon", coordinates: [ringXYZ] },
-    { type: "MultiPolygon", coordinates: [[ringXY]] },
-    { type: "MultiPolygon", coordinates: [[ringXYZ]] },
-  ];
+describe("product geometry validation", () => {
+  it.each<{ name: string; geometry: BoundingPolygon }>([
+    { name: "Polygon XY", geometry: polygon },
+    {
+      name: "Polygon XYZ",
+      geometry: { type: "Polygon", coordinates: [ringXYZ] },
+    },
+    {
+      name: "MultiPolygon XY",
+      geometry: { type: "MultiPolygon", coordinates: [[ringXY]] },
+    },
+    {
+      name: "MultiPolygon XYZ",
+      geometry: { type: "MultiPolygon", coordinates: [[ringXYZ]] },
+    },
+  ])("accepts a closed $name geometry", ({ geometry }) => {
+    expect(() => validateBoundingPolygon(geometry)).not.toThrow();
+  });
 
-  for (const geometry of cases) {
-    assert.doesNotThrow(() => validateBoundingPolygon(geometry));
-  }
-});
-
-test("geometry validation rejects an open ring", () => {
-  const geometry: BoundingPolygon = {
-    type: "Polygon",
-    coordinates: [
-      [
-        [34, 31],
-        [35, 31],
-        [35, 32],
-        [34, 32],
+  it("rejects an open ring", () => {
+    const geometry: BoundingPolygon = {
+      type: "Polygon",
+      coordinates: [
+        [
+          [34, 31],
+          [35, 31],
+          [35, 32],
+          [34, 32],
+        ],
       ],
-    ],
-  };
+    };
 
-  assert.throws(
-    () => validateBoundingPolygon(geometry),
-    ProductValidationError,
-  );
-});
+    expect(() => validateBoundingPolygon(geometry)).toThrow(
+      ProductValidationError,
+    );
+  });
 
-test("geometry validation rejects mixed coordinate dimensions", () => {
-  const geometry: BoundingPolygon = {
-    type: "Polygon",
-    coordinates: [
-      [
-        [34, 31],
-        [35, 31, 10],
-        [35, 32],
-        [34, 31],
+  it("rejects mixed coordinate dimensions", () => {
+    const geometry: BoundingPolygon = {
+      type: "Polygon",
+      coordinates: [
+        [
+          [34, 31],
+          [35, 31, 10],
+          [35, 32],
+          [34, 31],
+        ],
       ],
-    ],
-  };
+    };
 
-  assert.throws(
-    () => validateBoundingPolygon(geometry),
-    ProductValidationError,
+    expect(() => validateBoundingPolygon(geometry)).toThrow(
+      ProductValidationError,
+    );
+  });
+});
+
+describe("product fields", () => {
+  it("accepts omitted geometry on an update", () => {
+    expect(() => validateProductFields({ name: "renamed" })).not.toThrow();
+  });
+});
+
+describe("product search filters", () => {
+  it("does not add WHERE conditions for an empty search", () => {
+    expect(buildProductSearchConditions({})).toBeUndefined();
+  });
+
+  it("parameterizes text and joins text and numeric conditions with AND", () => {
+    const name = "example' OR TRUE; --";
+
+    const result = query({
+      equal: { name },
+      greater: { maxZoom: -1 },
+    });
+
+    expect(result.params).toEqual([name, -1]);
+    expect(result.sql).not.toContain(name);
+    expect(result.sql).toMatch(/\sand\s/i);
+  });
+
+  it.each([
+    ["equal", "="],
+    ["greater", ">"],
+    ["greaterEqual", ">="],
+    ["less", "<"],
+    ["lessEqual", "<="],
+  ] as const)(
+    "$0 supports numeric thresholds beyond the stored integer range",
+    (operator, comparison) => {
+      const input: SearchProductsInput = {};
+      input[operator] = { minZoom: 2_147_483_648 };
+
+      const result = query(input);
+
+      expect(result.params).toEqual([2_147_483_648]);
+      expect(result.sql).toContain(` ${comparison} `);
+      expect(result.sql).toMatch(/::double precision/);
+    },
   );
-});
 
-test("partial field validation accepts omitted geometry", () => {
-  assert.doesNotThrow(() => validateProductFields({ name: "renamed" }));
-});
+  it.each([
+    ["contains", "ST_Contains"],
+    ["within", "ST_Within"],
+    ["intersects", "ST_Intersects"],
+  ] as const)(
+    "$0 places the product footprint first and parameterizes GeoJSON",
+    (operator, predicate) => {
+      const input: SearchProductsInput = {};
+      input[operator] = { boundingPolygon: polygon };
 
-test("empty search has no WHERE conditions", () => {
-  assert.equal(buildProductSearchConditions({}), undefined);
-});
+      const result = query(input);
 
-test("search parameterizes text and joins text and numeric conditions with AND", () => {
-  const name = "example' OR TRUE; --";
+      expect(result.params).toEqual([JSON.stringify(polygon)]);
 
-  const result = query({
-    equal: { name },
-    greater: { maxZoom: -1 },
-  });
+      const functionStart = result.sql.indexOf(predicate + "(");
+      expect(functionStart).toBeGreaterThanOrEqual(0);
 
-  assert.deepEqual(result.params, [name, -1]);
-  assert.ok(!result.sql.includes(name));
-  assert.match(result.sql, /\sand\s/i);
-});
+      const args = result.sql
+        .slice(functionStart + predicate.length + 1)
+        .trimStart();
 
-for (const [operator, comparison] of [
-  ["equal", "="],
-  ["greater", ">"],
-  ["greaterEqual", ">="],
-  ["less", "<"],
-  ["lessEqual", "<="],
-] as const) {
-  test(`${operator} supports numeric thresholds beyond the stored integer range`, () => {
-    const input: SearchProductsInput = {};
-    input[operator] = { minZoom: 2_147_483_648 };
-
-    const result = query(input);
-
-    assert.deepEqual(result.params, [2_147_483_648]);
-    assert.ok(result.sql.includes(` ${comparison} `));
-    assert.match(result.sql, /::double precision/);
-  });
-}
-
-for (const [operator, predicate] of [
-  ["contains", "ST_Contains"],
-  ["within", "ST_Within"],
-  ["intersects", "ST_Intersects"],
-] as const) {
-  test(`${operator} places the product footprint first and parameterizes GeoJSON`, () => {
-    const input: SearchProductsInput = {};
-    input[operator] = { boundingPolygon: polygon };
-
-    const result = query(input);
-
-    assert.deepEqual(result.params, [JSON.stringify(polygon)]);
-
-    const functionStart = result.sql.indexOf(predicate + "(");
-    assert.ok(functionStart >= 0);
-
-    const args = result.sql
-      .slice(functionStart + predicate.length + 1)
-      .trimStart();
-
-    assert.ok(args.startsWith('"products"."bounding_polygon",'));
-  });
-}
-
-test("database zoom-order violations become a product validation error", () => {
-  const error = new DatabaseError("check failed", 0, "error");
-  error.code = "23514";
-  error.constraint = "products_zoom_range_valid";
-
-  assert.throws(
-    () => rethrowProductDatabaseError(error),
-    (caught) => {
-      assert.ok(caught instanceof ProductValidationError);
-      assert.equal(caught.statusCode, 400);
-      assert.equal(caught.field, "minZoom");
-      return true;
+      expect(args).toMatch(/^"products"\."bounding_polygon",/);
     },
   );
 });
 
-test("unexpected database errors are rethrown unchanged", () => {
-  const error = new Error("unexpected");
+describe("database error translation", () => {
+  it("converts zoom-order violations to a product validation error", () => {
+    const error = new DatabaseError("check failed", 0, "error");
+    error.code = "23514";
+    error.constraint = "products_zoom_range_valid";
 
-  assert.throws(
-    () => rethrowProductDatabaseError(error),
-    (caught) => caught === error,
-  );
+    let caught: unknown;
+    try {
+      rethrowProductDatabaseError(error);
+    } catch (thrown) {
+      caught = thrown;
+    }
+
+    expect(caught).toBeInstanceOf(ProductValidationError);
+    expect(caught).toMatchObject({ statusCode: 400, field: "minZoom" });
+  });
+
+  it("rethrows unexpected errors unchanged", () => {
+    const error = new Error("unexpected");
+    let caught: unknown;
+    try {
+      rethrowProductDatabaseError(error);
+    } catch (thrown) {
+      caught = thrown;
+    }
+
+    expect(caught).toBe(error);
+  });
 });

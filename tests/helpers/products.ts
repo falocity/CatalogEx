@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+import { expect } from "vitest";
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -60,11 +60,11 @@ export async function storeProduct(
     payload: input,
   });
 
-  assert.equal(response.statusCode, StatusCodes.CREATED, response.body);
+  expect(response.statusCode, response.body).toBe(StatusCodes.CREATED);
 
   const { id } = response.json<CreateProductResponse>();
-  assert.equal(typeof id, "string");
-  assert.deepEqual(response.json(), { id });
+  expect(id).toEqual(expect.any(String));
+  expect(response.json()).toEqual({ id });
 
   return id;
 }
