@@ -20,7 +20,7 @@ export function rectangle(
   bottom: number,
   right: number,
   top: number,
-): BoundingPolygon {
+): Extract<BoundingPolygon, { type: "Polygon" }> {
   return {
     type: "Polygon",
     coordinates: [
@@ -63,6 +63,21 @@ export async function storeProduct(
   expect(response.json()).toEqual({ id });
 
   return id;
+}
+export function expectValidationError(response: {
+  statusCode: number;
+  body: string;
+}): { code: string; message: string } {
+  expect(response.statusCode, response.body).toBe(StatusCodes.BAD_REQUEST);
+
+  const body = JSON.parse(response.body) as {
+    code: string;
+    message: string;
+  };
+
+  expect(body.code).toBe("VALIDATION_ERROR");
+
+  return body;
 }
 
 export async function withProductTest(

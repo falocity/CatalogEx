@@ -16,6 +16,7 @@ import type {
 } from "../../src/modules/products/schemas/product.schema.js";
 import type { SearchProductsInput } from "../../src/modules/products/schemas/search-products.schema.js";
 import {
+  expectValidationError,
   makeProduct,
   rectangle,
   storeProduct,
@@ -286,37 +287,29 @@ describe("health checks", () => {
   });
 });
 
-const ringXY: [number, number][] = [
-  [34, 32],
-  [35, 32],
-  [35, 33],
-  [34, 33],
-  [34, 32],
-];
+const polygonXY = rectangle(34, 32, 35, 33);
 
-const ringXYZ: [number, number, number][] = ringXY.map(
-  ([longitude, latitude]) => [longitude, latitude, 25],
-);
+const polygonXYZ = {
+  type: "Polygon",
+  coordinates: polygonXY.coordinates.map((ring) =>
+    ring.map(([longitude, latitude]): [number, number, number] => [
+      longitude,
+      latitude,
+      25,
+    ]),
+  ),
+} satisfies BoundingPolygon;
 
-const cases: {
-  name: string;
-  geometry: BoundingPolygon;
-}[] = [
-  {
-    name: "Polygon XY",
-    geometry: { type: "Polygon", coordinates: [ringXY] },
-  },
-  {
-    name: "Polygon XYZ",
-    geometry: { type: "Polygon", coordinates: [ringXYZ] },
-  },
+const cases: { name: string; geometry: BoundingPolygon }[] = [
+  { name: "Polygon XY", geometry: polygonXY },
+  { name: "Polygon XYZ", geometry: polygonXYZ },
   {
     name: "MultiPolygon XY",
-    geometry: { type: "MultiPolygon", coordinates: [[ringXY]] },
+    geometry: { type: "MultiPolygon", coordinates: [polygonXY.coordinates] },
   },
   {
     name: "MultiPolygon XYZ",
-    geometry: { type: "MultiPolygon", coordinates: [[ringXYZ]] },
+    geometry: { type: "MultiPolygon", coordinates: [polygonXYZ.coordinates] },
   },
 ];
 
@@ -532,58 +525,14 @@ describe("product request validation", () => {
   });
 
   function makeInput(): CreateProduct {
-    const name = `api-${randomUUID()}`;
-    names.add(name);
-
-    return {
-      name,
-      boundingPolygon: {
-        type: "Polygon",
-        coordinates: [
-          [
-            [34, 31],
-            [35, 31],
-            [35, 32],
-            [34, 32],
-            [34, 31],
-          ],
-        ],
-      },
-      consumptionLink: "https://example.com/wmts",
-      productType: "raster",
-      consumptionProtocol: "WMTS",
+    const input = makeProduct({
+      boundingPolygon: rectangle(34, 31, 35, 32),
       resolutionBest: 0.5,
       minZoom: 1,
-      maxZoom: 18,
-    };
-  }
+    });
 
-  async function store(input: CreateProduct): Promise<string> {
-    const response = await requests.create(input);
-
-    expect(response.statusCode, response.body).toBe(StatusCodes.CREATED);
-
-    const { id } = response.json<{ id: string }>();
-    expect(id).toEqual(expect.any(String));
-    expect(response.json()).toEqual({ id });
-
-    return id;
-  }
-
-  function expectValidationError(response: {
-    statusCode: number;
-    body: string;
-  }) {
-    expect(response.statusCode, response.body).toBe(StatusCodes.BAD_REQUEST);
-
-    const body = JSON.parse(response.body) as {
-      code: string;
-      message: string;
-    };
-
-    expect(body.code).toBe("VALIDATION_ERROR");
-
-    return body;
+    names.add(input.name);
+    return input;
   }
 
   afterAll(async () => {
@@ -602,7 +551,7 @@ describe("product request validation", () => {
   describe("Happy Path", () => {
     it("stores minZoom zero on POST", async () => {
       const input = { ...makeInput(), minZoom: 0 };
-      const id = await store(input);
+      const id = await storeProduct(app, input);
 
       const response = await requests.getById(id);
 
@@ -612,7 +561,7 @@ describe("product request validation", () => {
 
     it("stores minZoom zero on PATCH and preserves omitted fields", async () => {
       const input = makeInput();
-      const id = await store(input);
+      const id = await storeProduct(app, input);
 
       const update = await requests.update(id, { minZoom: 0 });
 
@@ -643,7 +592,8 @@ describe("product request validation", () => {
         const input = makeInput();
         const overflow = 2_147_483_648;
 
-        const id = method === "PATCH" ? await store(input) : undefined;
+        const id =
+          method === "PATCH" ? await storeProduct(app, input) : undefined;
 
         const payload =
           method === "PATCH"
@@ -686,7 +636,8 @@ describe("product request validation", () => {
       ["search", "MultiPolygon"],
     ] as const)("%s rejects extra %s properties", async (operation, kind) => {
       const input = makeInput();
-      const id = operation === "update" ? await store(input) : undefined;
+      const id =
+        operation === "update" ? await storeProduct(app, input) : undefined;
 
       const geometry =
         kind === "Polygon"
@@ -735,7 +686,8 @@ describe("product request validation", () => {
       async (operation) => {
         const input = { ...makeInput(), minZoom: 5 };
 
-        const id = operation === "create" ? undefined : await store(input);
+        const id =
+          operation === "create" ? undefined : await storeProduct(app, input);
 
         const payload =
           operation === "create"
