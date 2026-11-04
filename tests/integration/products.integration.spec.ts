@@ -21,20 +21,20 @@ import {
   storeProduct,
   withProductTest,
 } from "../helpers/products.js";
+import { ProductsRequestSender } from "../helpers/productsRequestSender.js";
 
 describe("products API", () => {
   describe("Happy Path", () => {
     it("creates a product and returns its ID and Location", () =>
       withProductTest(async ({ app }) => {
-        const response = await app.inject({
-          method: "POST",
-          url: "/products",
-          payload: makeProduct({
+        const requests = new ProductsRequestSender(app);
+        const response = await requests.create(
+          makeProduct({
             boundingPolygon: rectangle(34, 31, 35, 32),
             resolutionBest: 0.5,
             minZoom: 1,
           }),
-        });
+        );
 
         expect(response.statusCode, response.body).toBe(StatusCodes.CREATED);
         const created = response.json<CreateProductResponse>();
@@ -47,12 +47,10 @@ describe("products API", () => {
 
     it("retrieves the stored product", () =>
       withProductTest(async ({ app }) => {
+        const requests = new ProductsRequestSender(app);
         const input = makeProduct();
         const id = await storeProduct(app, input);
-        const response = await app.inject({
-          method: "GET",
-          url: `/products/${id}`,
-        });
+        const response = await requests.getById(id);
 
         expect(response.statusCode, response.body).toBe(StatusCodes.OK);
         expect(response.json<Product>()).toEqual({ ...input, id });
@@ -60,6 +58,7 @@ describe("products API", () => {
 
     it("searches by name and numeric resolution threshold", () =>
       withProductTest(async ({ app }) => {
+        const requests = new ProductsRequestSender(app);
         const input = makeProduct({ resolutionBest: 0.5 });
         const id = await storeProduct(app, input);
 
@@ -67,14 +66,14 @@ describe("products API", () => {
           { threshold: 0.25, expectedIds: [id] },
           { threshold: 1, expectedIds: [] },
         ]) {
-          const response = await app.inject({
-            method: "POST",
-            url: "/products/search?limit=1&offset=0",
-            payload: {
+          const response = await requests.search(
+            {
               equal: { name: input.name },
               greater: { resolutionBest: threshold },
             },
-          });
+            1,
+            0,
+          );
 
           expect(response.statusCode, response.body).toBe(StatusCodes.OK);
           const page = response.json<ProductsPage>();
@@ -85,36 +84,32 @@ describe("products API", () => {
 
     it("updates a field and preserves omitted fields", () =>
       withProductTest(async ({ app }) => {
+        const requests = new ProductsRequestSender(app);
         const input = makeProduct();
         const id = await storeProduct(app, input);
         const expected = { ...input, id, description: "Updated automatically" };
 
-        const update = await app.inject({
-          method: "PATCH",
-          url: `/products/${id}`,
-          payload: { description: expected.description },
+        const update = await requests.update(id, {
+          description: expected.description,
         });
         expect(update.statusCode, update.body).toBe(StatusCodes.OK);
         expect(update.json<Product>()).toEqual(expected);
 
-        const retrieval = await app.inject({
-          method: "GET",
-          url: `/products/${id}`,
-        });
+        const retrieval = await requests.getById(id);
         expect(retrieval.statusCode, retrieval.body).toBe(StatusCodes.OK);
         expect(retrieval.json<Product>()).toEqual(expected);
       }));
 
     it("deletes a product and returns 404 on a subsequent GET", () =>
       withProductTest(async ({ app }) => {
+        const requests = new ProductsRequestSender(app);
         const id = await storeProduct(app, makeProduct());
-        const url = `/products/${id}`;
 
-        const deletion = await app.inject({ method: "DELETE", url });
+        const deletion = await requests.remove(id);
         expect(deletion.statusCode, deletion.body).toBe(StatusCodes.NO_CONTENT);
         expect(deletion.body).toBe("");
 
-        const missing = await app.inject({ method: "GET", url });
+        const missing = await requests.getById(id);
         expect(missing.statusCode, missing.body).toBe(StatusCodes.NOT_FOUND);
         expect(missing.json<{ code: string }>().code).toBe("PRODUCT_NOT_FOUND");
       }));
@@ -123,13 +118,12 @@ describe("products API", () => {
   describe("Sad Path", () => {
     it.each(["PATCH", "DELETE"] as const)("%s returns 404", async (method) => {
       await withProductTest(async ({ app }) => {
-        const response = await app.inject({
-          method,
-          url: `/products/${randomUUID()}`,
-          ...(method === "PATCH"
-            ? { payload: { name: "Missing product" } }
-            : {}),
-        });
+        const requests = new ProductsRequestSender(app);
+        const id = randomUUID();
+        const response =
+          method === "PATCH"
+            ? await requests.update(id, { name: "Missing product" })
+            : await requests.remove(id);
 
         expect(response.statusCode, response.body).toBe(StatusCodes.NOT_FOUND);
         expect(response.json()).toEqual({
@@ -138,6 +132,77 @@ describe("products API", () => {
           field: "id",
         });
       });
+    });
+  });
+});
+
+describe("health routes", () => {
+  beforeAll(async () => {
+    await initConfig();
+  });
+
+  describe("Happy Path", () => {
+    it("does not call database readiness for liveness", async () => {
+      const checkDatabase = vi.fn(async () => {
+        throw new Error("unavailable");
+      });
+      const { app } = await buildApp(
+        { logger: false },
+        {
+          override: [
+            {
+              token: SERVICES.DATABASE_READINESS,
+              provider: { useValue: checkDatabase },
+            },
+          ],
+        },
+      );
+
+      try {
+        const response = await app.inject({
+          method: "GET",
+          url: "/health/live",
+        });
+
+        expect(response.statusCode).toBe(StatusCodes.OK);
+        expect(response.json()).toEqual({ status: "ok" });
+        expect(checkDatabase).not.toHaveBeenCalled();
+      } finally {
+        await app.close();
+      }
+    });
+  });
+
+  describe("Sad Path", () => {
+    it("returns 503 without database details on readiness failure", async () => {
+      const checkDatabase = vi.fn(async () => {
+        throw new Error("private database error");
+      });
+      const { app } = await buildApp(
+        { logger: false },
+        {
+          override: [
+            {
+              token: SERVICES.DATABASE_READINESS,
+              provider: { useValue: checkDatabase },
+            },
+          ],
+        },
+      );
+
+      try {
+        const response = await app.inject({
+          method: "GET",
+          url: "/health/ready",
+        });
+
+        expect(checkDatabase).toHaveBeenCalledOnce();
+        expect(response.statusCode).toBe(StatusCodes.SERVICE_UNAVAILABLE);
+        expect(response.json()).toEqual({ status: "not_ready" });
+        expect(response.body).not.toContain("private database error");
+      } finally {
+        await app.close();
+      }
     });
   });
 });
@@ -180,15 +245,13 @@ describe("product footprint API", () => {
   describe("Happy Path", () => {
     it.each(cases)("stores and returns $name", ({ geometry }) =>
       withProductTest(async ({ app }) => {
+        const requests = new ProductsRequestSender(app);
         const id = await storeProduct(
           app,
           makeProduct({ boundingPolygon: geometry }),
         );
 
-        const response = await app.inject({
-          method: "GET",
-          url: `/products/${id}`,
-        });
+        const response = await requests.getById(id);
 
         expect(response.statusCode, response.body).toBe(StatusCodes.OK);
         expect(response.json<Product>().boundingPolygon).toEqual(geometry);
@@ -199,13 +262,10 @@ describe("product footprint API", () => {
   describe("Bad Path", () => {
     it("rejects Point geometry", () =>
       withProductTest(async ({ app }) => {
-        const response = await app.inject({
-          method: "POST",
-          url: "/products",
-          payload: {
-            ...makeProduct(),
-            boundingPolygon: { type: "Point", coordinates: [34, 32] },
-          },
+        const requests = new ProductsRequestSender(app);
+        const response = await requests.create({
+          ...makeProduct(),
+          boundingPolygon: { type: "Point", coordinates: [34, 32] },
         });
 
         expect(response.statusCode, response.body).toBe(
@@ -221,11 +281,11 @@ async function search(
   offset = 0,
   limit = 20,
 ): Promise<ProductsPage> {
-  const response = await app.inject({
-    method: "POST",
-    url: `/products/search?limit=${limit}&offset=${offset}`,
-    payload: filters,
-  });
+  const response = await new ProductsRequestSender(app).search(
+    filters,
+    limit,
+    offset,
+  );
 
   expect(response.statusCode, response.body).toBe(StatusCodes.OK);
   return response.json<ProductsPage>();
@@ -341,6 +401,7 @@ describe("product search", () => {
 
     it("lists pages matching the database snapshot", async () => {
       await withProductTest(async ({ app, client }) => {
+        const requests = new ProductsRequestSender(app);
         for (let i = 0; i < 3; i++) {
           await storeProduct(app, makeProduct());
         }
@@ -353,13 +414,13 @@ describe("product search", () => {
         const countResult = await client.query<{ count: number }>(
           "SELECT count(*)::integer AS count FROM public.products",
         );
-        const count = countResult.rows[0]!.count;
+        const count = countResult.rows[0]?.count;
+        if (count === undefined) {
+          throw new Error("Product count query returned no row");
+        }
 
         for (const offset of [0, 2, count]) {
-          const response = await app.inject({
-            method: "GET",
-            url: `/products?limit=2&offset=${offset}`,
-          });
+          const response = await requests.list(2, offset);
 
           expect(response.statusCode, response.body).toBe(StatusCodes.OK);
 
@@ -379,6 +440,7 @@ describe("product search", () => {
 
 describe("product request validation", () => {
   let app: FastifyInstance;
+  let requests: ProductsRequestSender;
   let pool: Pool;
   const names = new Set<string>();
 
@@ -386,6 +448,7 @@ describe("product request validation", () => {
     await initConfig();
     const built = await buildApp({ logger: false });
     app = built.app;
+    requests = new ProductsRequestSender(app);
     pool = built.container.resolve<Pool>(SERVICES.POOL);
   });
 
@@ -417,11 +480,7 @@ describe("product request validation", () => {
   }
 
   async function store(input: CreateProduct): Promise<string> {
-    const response = await app.inject({
-      method: "POST",
-      url: "/products",
-      payload: input,
-    });
+    const response = await requests.create(input);
 
     expect(response.statusCode, response.body).toBe(StatusCodes.CREATED);
 
@@ -466,10 +525,7 @@ describe("product request validation", () => {
       const input = { ...makeInput(), minZoom: 0 };
       const id = await store(input);
 
-      const response = await app.inject({
-        method: "GET",
-        url: `/products/${id}`,
-      });
+      const response = await requests.getById(id);
 
       expect(response.statusCode, response.body).toBe(StatusCodes.OK);
       expect(response.json<Product>().minZoom).toBe(0);
@@ -479,18 +535,11 @@ describe("product request validation", () => {
       const input = makeInput();
       const id = await store(input);
 
-      const update = await app.inject({
-        method: "PATCH",
-        url: `/products/${id}`,
-        payload: { minZoom: 0 },
-      });
+      const update = await requests.update(id, { minZoom: 0 });
 
       expect(update.statusCode, update.body).toBe(StatusCodes.OK);
 
-      const retrieval = await app.inject({
-        method: "GET",
-        url: `/products/${id}`,
-      });
+      const retrieval = await requests.getById(id);
 
       expect(retrieval.statusCode, retrieval.body).toBe(StatusCodes.OK);
 
@@ -526,11 +575,10 @@ describe("product request validation", () => {
                 ...(field === "minZoom" ? { maxZoom: overflow } : {}),
               };
 
-        const response = await app.inject({
-          method,
-          url: method === "POST" ? "/products" : `/products/${id}`,
-          payload,
-        });
+        const response =
+          id === undefined
+            ? await requests.create(payload)
+            : await requests.update(id, payload);
 
         const error = expectValidationError(response);
 
@@ -539,10 +587,7 @@ describe("product request validation", () => {
         );
 
         if (id !== undefined) {
-          const retrieval = await app.inject({
-            method: "GET",
-            url: `/products/${id}`,
-          });
+          const retrieval = await requests.getById(id);
 
           expect(retrieval.statusCode, retrieval.body).toBe(StatusCodes.OK);
 
@@ -585,25 +630,18 @@ describe("product request validation", () => {
               ? { boundingPolygon: invalidGeometry }
               : { intersects: { boundingPolygon: invalidGeometry } };
 
-        const response = await app.inject({
-          method: operation === "update" ? "PATCH" : "POST",
-          url:
-            operation === "create"
-              ? "/products"
-              : operation === "update"
-                ? `/products/${id}`
-                : "/products/search",
-          payload,
-        });
+        const response =
+          operation === "create"
+            ? await requests.create(payload)
+            : id !== undefined
+              ? await requests.update(id, payload)
+              : await requests.search(payload, 20, 0);
 
         expectValidationError(response);
       }
 
       if (id !== undefined) {
-        const retrieval = await app.inject({
-          method: "GET",
-          url: `/products/${id}`,
-        });
+        const retrieval = await requests.getById(id);
 
         expect(retrieval.statusCode, retrieval.body).toBe(StatusCodes.OK);
 
@@ -629,20 +667,16 @@ describe("product request validation", () => {
                 ? { minZoom: 19 }
                 : { maxZoom: 4 };
 
-        const response = await app.inject({
-          method: operation === "create" ? "POST" : "PATCH",
-          url: operation === "create" ? "/products" : `/products/${id}`,
-          payload,
-        });
+        const response =
+          id === undefined
+            ? await requests.create(payload)
+            : await requests.update(id, payload);
 
         const error = expectValidationError(response);
         expect(error.message).toBe("minZoom must not exceed maxZoom.");
 
         if (id !== undefined) {
-          const retrieval = await app.inject({
-            method: "GET",
-            url: `/products/${id}`,
-          });
+          const retrieval = await requests.getById(id);
 
           expect(retrieval.statusCode, retrieval.body).toBe(StatusCodes.OK);
 
@@ -654,12 +688,11 @@ describe("product request validation", () => {
     it.each(["POST", "PATCH"] as const)(
       "%s rejects unsupported request media types",
       async (method) => {
-        const response = await app.inject({
-          method,
-          url: method === "POST" ? "/products" : `/products/${randomUUID()}`,
-          headers: { "content-type": "text/plain" },
-          payload: "not JSON",
-        });
+        const headers = { "content-type": "text/plain" };
+        const response =
+          method === "POST"
+            ? await requests.create("not JSON", headers)
+            : await requests.update(randomUUID(), "not JSON", headers);
 
         expect(response.statusCode, response.body).toBe(
           StatusCodes.UNSUPPORTED_MEDIA_TYPE,
@@ -669,76 +702,5 @@ describe("product request validation", () => {
         );
       },
     );
-  });
-});
-
-describe("health routes", () => {
-  beforeAll(async () => {
-    await initConfig();
-  });
-
-  describe("Happy Path", () => {
-    it("does not call database readiness for liveness", async () => {
-      const checkDatabase = vi.fn(async () => {
-        throw new Error("unavailable");
-      });
-      const { app } = await buildApp(
-        { logger: false },
-        {
-          override: [
-            {
-              token: SERVICES.DATABASE_READINESS,
-              provider: { useValue: checkDatabase },
-            },
-          ],
-        },
-      );
-
-      try {
-        const response = await app.inject({
-          method: "GET",
-          url: "/health/live",
-        });
-
-        expect(response.statusCode).toBe(StatusCodes.OK);
-        expect(response.json()).toEqual({ status: "ok" });
-        expect(checkDatabase).not.toHaveBeenCalled();
-      } finally {
-        await app.close();
-      }
-    });
-  });
-
-  describe("Sad Path", () => {
-    it("returns 503 without database details on readiness failure", async () => {
-      const checkDatabase = vi.fn(async () => {
-        throw new Error("private database error");
-      });
-      const { app } = await buildApp(
-        { logger: false },
-        {
-          override: [
-            {
-              token: SERVICES.DATABASE_READINESS,
-              provider: { useValue: checkDatabase },
-            },
-          ],
-        },
-      );
-
-      try {
-        const response = await app.inject({
-          method: "GET",
-          url: "/health/ready",
-        });
-
-        expect(checkDatabase).toHaveBeenCalledOnce();
-        expect(response.statusCode).toBe(StatusCodes.SERVICE_UNAVAILABLE);
-        expect(response.json()).toEqual({ status: "not_ready" });
-        expect(response.body).not.toContain("private database error");
-      } finally {
-        await app.close();
-      }
-    });
   });
 });

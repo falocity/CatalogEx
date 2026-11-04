@@ -9,6 +9,7 @@ import { getConfig, initConfig } from "../../src/common/config.js";
 import { SERVICES } from "../../src/common/constants.js";
 import { createPool } from "../../src/db/client.js";
 import type { BoundingPolygon } from "../../src/modules/products/schemas/fields.schema.js";
+import { ProductsRequestSender } from "./productsRequestSender.js";
 import type {
   CreateProduct,
   CreateProductResponse,
@@ -54,12 +55,7 @@ export async function storeProduct(
   app: FastifyInstance,
   input: CreateProduct,
 ): Promise<string> {
-  const response = await app.inject({
-    method: "POST",
-    url: "/products",
-    payload: input,
-  });
-
+  const response = await new ProductsRequestSender(app).create(input);
   expect(response.statusCode, response.body).toBe(StatusCodes.CREATED);
 
   const { id } = response.json<CreateProductResponse>();
