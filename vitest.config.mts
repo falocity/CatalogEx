@@ -1,37 +1,32 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    reporters: ["verbose"],
+    reporters: ['verbose'],
     projects: [
       {
         test: {
-          name: "unit",
-          environment: "node",
-          setupFiles: ["./tests/setup.mts"],
-          include: ["tests/unit/**/*.spec.ts"],
+          name: 'unit',
+          environment: 'node',
+          setupFiles: ['./tests/setup.mts'],
+          include: ['tests/unit/**/*.spec.ts'],
         },
       },
       {
         test: {
-          name: "integration",
-          environment: "node",
-          setupFiles: ["./tests/setup.mts"],
-          include: ["tests/integration/**/*.spec.ts"],
+          name: 'integration',
+          environment: 'node',
+          setupFiles: ['./tests/setup.mts'],
+          include: ['tests/integration/**/*.spec.ts'],
         },
       },
     ],
     coverage: {
       enabled: true,
-      provider: "v8",
-      reporter: ["text", "html", "json", "json-summary"],
-      include: ["src/**/*.{ts,mts}"],
-      exclude: [
-        "src/index.ts",
-        "src/instrumentation.mts",
-        "src/db/migrate.ts",
-        "**/*.test.ts",
-      ],
+      provider: 'v8',
+      reporter: ['text', 'html', 'json', 'json-summary'],
+      include: ['src/**/*.{ts,mts}'],
+      exclude: ['src/index.ts', 'src/instrumentation.mts', 'src/db/migrate.ts', '**/*.test.ts'],
       reportOnFailure: true,
       thresholds: {
         global: {

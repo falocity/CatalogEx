@@ -1,21 +1,21 @@
-import { StatusCodes } from "http-status-codes";
+import { StatusCodes } from 'http-status-codes';
 
 export class AppError extends Error {
-  constructor(
-    readonly code: string,
+  public constructor(
+    public readonly code: string,
     message: string,
-    readonly statusCode: number,
-    readonly field?: string,
+    public readonly statusCode: number,
+    public readonly field?: string
   ) {
     super(message);
-    this.name = "AppError";
+    this.name = 'AppError';
   }
 }
 
 export class ValidationError extends AppError {
-  constructor(field: string, message: string) {
-    super("VALIDATION_ERROR", message, StatusCodes.BAD_REQUEST, field);
+  public constructor(field: string, message: string) {
+    super('VALIDATION_ERROR', message, StatusCodes.BAD_REQUEST, field);
 
-    this.name = "ValidationError";
+    this.name = 'ValidationError';
   }
 }
