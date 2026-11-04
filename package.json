@@ -18,9 +18,8 @@
     "db:migrate:prod": "node dist/db/migrate.js",
     "test": "vitest run",
     "test:watch": "vitest watch",
-    "test:db": "vitest run --coverage.enabled=false tests/integration/products.integration.test.ts -t 'product footprint API'",
-    "test:api": "vitest run --project integration",
-    "test:unit": "vitest run --project unit"
+    "test:unit": "vitest run --coverage.enabled=false --project unit",
+    "test:integration": "vitest run --coverage.enabled=false --project integration"
   },
   "keywords": [],
   "author": "",
