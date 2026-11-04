@@ -1,21 +1,24 @@
-import { config, type ConfigInstance } from "@map-colonies/config";
-import { AppConfigSchema, type AppConfig } from "./config.schema.js";
+import { config, type ConfigInstance } from '@map-colonies/config';
+import { appConfigSchema, type AppConfig } from './config.schema.js';
 
-export type ConfigType = ConfigInstance<AppConfig>;
+type ConfigType = ConfigInstance<AppConfig>;
 
 let configInstance: ConfigType | undefined;
 
-export async function initConfig(offlineMode = true): Promise<void> {
+async function initConfig(offlineMode = true): Promise<void> {
   configInstance = await config({
-    schema: AppConfigSchema,
+    schema: appConfigSchema,
     offlineMode,
   });
 }
 
-export function getConfig(): ConfigType {
+function getConfig(): ConfigType {
   if (!configInstance) {
-    throw new Error("Configuration has not been initialized");
+    throw new Error('Configuration has not been initialized');
   }
 
   return configInstance;
 }
+
+export { initConfig, getConfig };
+export type { ConfigType };

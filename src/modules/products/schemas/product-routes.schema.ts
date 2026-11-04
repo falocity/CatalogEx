@@ -1,74 +1,66 @@
-import Type from "typebox";
-import type { FastifySchema } from "fastify";
-import { StatusCodes } from "http-status-codes";
-import {
-  CreateProductResponseSchema,
-  CreateProductSchemaInput,
-  ProductIdParamsSchema,
-  ProductSchema,
-} from "./product.schema.js";
-import {
-  PaginationQuerySchema,
-  ProductsPageSchema,
-} from "./pagination.schema.js";
-import { UpdateProductSchema } from "./update-product.schema.js";
-import { SearchProductsSchema } from "./search-products.schema.js";
+import typebox from 'typebox';
+import type { FastifySchema } from 'fastify';
+import { StatusCodes } from 'http-status-codes';
+import { createProductResponseSchema, createProductSchemaInput, productIdParamsSchema, productSchema } from './product.schema.js';
+import { paginationQuerySchema, productsPageSchema } from './pagination.schema.js';
+import { updateProductSchema } from './update-product.schema.js';
+import { searchProductsSchema } from './search-products.schema.js';
 
-const ErrorResponseSchema = Type.Object(
+const errorResponseSchema = typebox.Object(
   {
-    code: Type.String(),
-    message: Type.String(),
-    field: Type.Optional(Type.String()),
+    code: typebox.String(),
+    message: typebox.String(),
+    field: typebox.Optional(typebox.String()),
   },
-  { additionalProperties: false },
+  { additionalProperties: false }
 );
 
 const commonErrors = {
-  [StatusCodes.BAD_REQUEST]: ErrorResponseSchema,
-  [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorResponseSchema,
+  [StatusCodes.BAD_REQUEST]: errorResponseSchema,
+  [StatusCodes.INTERNAL_SERVER_ERROR]: errorResponseSchema,
 };
 
 const notFound = {
-  [StatusCodes.NOT_FOUND]: ErrorResponseSchema,
+  [StatusCodes.NOT_FOUND]: errorResponseSchema,
 };
 
 const bodyErrors = {
-  [StatusCodes.REQUEST_TOO_LONG]: ErrorResponseSchema,
-  [StatusCodes.UNSUPPORTED_MEDIA_TYPE]: ErrorResponseSchema,
+  [StatusCodes.REQUEST_TOO_LONG]: errorResponseSchema,
+  [StatusCodes.UNSUPPORTED_MEDIA_TYPE]: errorResponseSchema,
 };
 
 export const productRouteSchemas = {
   create: {
-    body: CreateProductSchemaInput,
+    body: createProductSchemaInput,
     response: {
-      [StatusCodes.CREATED]: CreateProductResponseSchema,
+      [StatusCodes.CREATED]: createProductResponseSchema,
       ...commonErrors,
       ...bodyErrors,
     },
   },
 
   getById: {
-    params: ProductIdParamsSchema,
+    params: productIdParamsSchema,
     response: {
-      [StatusCodes.OK]: ProductSchema,
+      [StatusCodes.OK]: productSchema,
       ...commonErrors,
       ...notFound,
     },
   },
 
   list: {
-    querystring: PaginationQuerySchema,
+    querystring: paginationQuerySchema,
     response: {
-      [StatusCodes.OK]: ProductsPageSchema,
+      [StatusCodes.OK]: productsPageSchema,
       ...commonErrors,
     },
   },
 
   update: {
-    params: ProductIdParamsSchema,
-    body: UpdateProductSchema,
+    params: productIdParamsSchema,
+    body: updateProductSchema,
     response: {
-      [StatusCodes.OK]: ProductSchema,
+      [StatusCodes.OK]: productSchema,
       ...commonErrors,
       ...notFound,
       ...bodyErrors,
@@ -76,7 +68,7 @@ export const productRouteSchemas = {
   },
 
   remove: {
-    params: ProductIdParamsSchema,
+    params: productIdParamsSchema,
     response: {
       ...commonErrors,
       ...notFound,
@@ -84,10 +76,10 @@ export const productRouteSchemas = {
   },
 
   search: {
-    body: SearchProductsSchema,
-    querystring: PaginationQuerySchema,
+    body: searchProductsSchema,
+    querystring: paginationQuerySchema,
     response: {
-      [StatusCodes.OK]: ProductsPageSchema,
+      [StatusCodes.OK]: productsPageSchema,
       ...commonErrors,
       ...bodyErrors,
     },

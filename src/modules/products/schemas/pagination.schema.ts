@@ -1,37 +1,40 @@
-import Type from "typebox";
-import { ProductSchema } from "./product.schema.js";
+import typebox from 'typebox';
+import { productSchema } from './product.schema.js';
 
-export const DEFAULT_PAGE_LIMIT = 20;
-export const DEFAULT_PAGE_OFFSET = 0;
+const DEFAULT_PAGE_LIMIT = 20;
+const DEFAULT_PAGE_OFFSET = 0;
 
 const MAX_PAGE_LIMIT = 100;
 
-const LimitSchema = Type.Integer({
+const limitSchema = typebox.Integer({
   minimum: 1,
   maximum: MAX_PAGE_LIMIT,
 });
 
-const OffsetSchema = Type.Integer({
+const offsetSchema = typebox.Integer({
   minimum: 0,
 });
-export const PaginationQuerySchema = Type.Object(
+const paginationQuerySchema = typebox.Object(
   {
-    limit: Type.Optional(LimitSchema),
-    offset: Type.Optional(OffsetSchema),
+    limit: typebox.Optional(limitSchema),
+    offset: typebox.Optional(offsetSchema),
   },
-  { additionalProperties: false },
+  { additionalProperties: false }
 );
-export const ProductsPageSchema = Type.Object(
+const productsPageSchema = typebox.Object(
   {
-    items: Type.Array(ProductSchema, {
+    items: typebox.Array(productSchema, {
       maxItems: MAX_PAGE_LIMIT,
     }),
-    limit: LimitSchema,
-    offset: OffsetSchema,
-    hasMore: Type.Boolean(),
+    limit: limitSchema,
+    offset: offsetSchema,
+    hasMore: typebox.Boolean(),
   },
-  { additionalProperties: false },
+  { additionalProperties: false }
 );
 
-export type PaginationQuery = Type.Static<typeof PaginationQuerySchema>;
-export type ProductsPage = Type.Static<typeof ProductsPageSchema>;
+type PaginationQuery = typebox.Static<typeof paginationQuerySchema>;
+type ProductsPage = typebox.Static<typeof productsPageSchema>;
+
+export { DEFAULT_PAGE_LIMIT, DEFAULT_PAGE_OFFSET, paginationQuerySchema, productsPageSchema };
+export type { PaginationQuery, ProductsPage };

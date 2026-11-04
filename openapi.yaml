@@ -13,14 +13,14 @@ paths:
       operationId: createProduct
       summary: Create a product
       responses:
-        "201":
+        '201':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreateProductResponse"
+                $ref: '#/components/schemas/CreateProductResponse'
               examples:
                 example:
-                  $ref: "#/components/examples/CreateProductResponse"
+                  $ref: '#/components/examples/CreateProductResponse'
           headers:
             Location:
               required: true
@@ -29,45 +29,45 @@ paths:
                 format: uri-reference
               description: Retrieval URI of the created product.
           description: Product created.
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "413":
-          $ref: "#/components/responses/PayloadTooLarge"
-        "415":
-          $ref: "#/components/responses/UnsupportedMediaType"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateProduct"
+              $ref: '#/components/schemas/CreateProduct'
             examples:
               example:
-                $ref: "#/components/examples/CreateProduct"
+                $ref: '#/components/examples/CreateProduct'
       description: Creates a product with a server-generated UUID.
     get:
       tags: [Products]
       operationId: listProducts
       summary: List products
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProductsPage"
+                $ref: '#/components/schemas/ProductsPage'
               examples:
                 example:
-                  $ref: "#/components/examples/ProductsPage"
+                  $ref: '#/components/examples/ProductsPage'
           description: Product page.
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       parameters:
-        - $ref: "#/components/parameters/Limit"
-        - $ref: "#/components/parameters/Offset"
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
       description: Returns an unfiltered page. No results return an empty items array.
   /products/{id}:
     get:
@@ -75,77 +75,76 @@ paths:
       operationId: getProductById
       summary: Retrieve a product
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Product"
+                $ref: '#/components/schemas/Product'
               examples:
                 example:
-                  $ref: "#/components/examples/Product"
+                  $ref: '#/components/examples/Product'
           description: Product found.
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       parameters:
-        - $ref: "#/components/parameters/ProductId"
+        - $ref: '#/components/parameters/ProductId'
       description: Returns the product identified by its UUID.
     patch:
       tags: [Products]
       operationId: updateProduct
       summary: Partially update a product
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Product"
+                $ref: '#/components/schemas/Product'
               examples:
                 example:
-                  $ref: "#/components/examples/UpdatedProduct"
+                  $ref: '#/components/examples/UpdatedProduct'
           description: Product updated.
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "413":
-          $ref: "#/components/responses/PayloadTooLarge"
-        "415":
-          $ref: "#/components/responses/UnsupportedMediaType"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       parameters:
-        - $ref: "#/components/parameters/ProductId"
+        - $ref: '#/components/parameters/ProductId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateProduct"
+              $ref: '#/components/schemas/UpdateProduct'
             examples:
               example:
-                $ref: "#/components/examples/UpdateProduct"
-      description:
-        Updates supplied fields atomically; omitted fields remain unchanged. A supplied geometry
+                $ref: '#/components/examples/UpdateProduct'
+      description: Updates supplied fields atomically; omitted fields remain unchanged. A supplied geometry
         replaces the whole geometry. The resulting product must satisfy the product constraints.
     delete:
       tags: [Products]
       operationId: deleteProduct
       summary: Delete a product
       responses:
-        "204":
+        '204':
           description: Product deleted. No response body.
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       parameters:
-        - $ref: "#/components/parameters/ProductId"
+        - $ref: '#/components/parameters/ProductId'
       description: Deletes the product. A missing product returns 404.
   /products/search:
     post:
@@ -153,37 +152,36 @@ paths:
       operationId: searchProducts
       summary: Search products
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProductsPage"
+                $ref: '#/components/schemas/ProductsPage'
               examples:
                 example:
-                  $ref: "#/components/examples/ProductsPage"
+                  $ref: '#/components/examples/ProductsPage'
           description: Matching product page.
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "413":
-          $ref: "#/components/responses/PayloadTooLarge"
-        "415":
-          $ref: "#/components/responses/UnsupportedMediaType"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       parameters:
-        - $ref: "#/components/parameters/Limit"
-        - $ref: "#/components/parameters/Offset"
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SearchProducts"
+              $ref: '#/components/schemas/SearchProducts'
             examples:
               example:
-                $ref: "#/components/examples/SearchProducts"
-      description:
-        Read-only search. All conditions combine with AND. An empty object lists products without
+                $ref: '#/components/examples/SearchProducts'
+      description: Read-only search. All conditions combine with AND. An empty object lists products without
         filtering. No matches return an empty items array.
 components:
   parameters:
@@ -218,7 +216,7 @@ components:
         application/json:
           schema:
             allOf:
-              - $ref: "#/components/schemas/ApiError"
+              - $ref: '#/components/schemas/ApiError'
               - type: object
                 properties:
                   code:
@@ -233,7 +231,7 @@ components:
         application/json:
           schema:
             allOf:
-              - $ref: "#/components/schemas/ApiError"
+              - $ref: '#/components/schemas/ApiError'
               - type: object
                 properties:
                   code:
@@ -248,7 +246,7 @@ components:
         application/json:
           schema:
             allOf:
-              - $ref: "#/components/schemas/ApiError"
+              - $ref: '#/components/schemas/ApiError'
               - type: object
                 properties:
                   code:
@@ -262,7 +260,7 @@ components:
         application/json:
           schema:
             allOf:
-              - $ref: "#/components/schemas/ApiError"
+              - $ref: '#/components/schemas/ApiError'
               - type: object
                 properties:
                   code:
@@ -276,7 +274,7 @@ components:
         application/json:
           schema:
             allOf:
-              - $ref: "#/components/schemas/ApiError"
+              - $ref: '#/components/schemas/ApiError'
               - type: object
                 properties:
                   code:
@@ -300,17 +298,7 @@ components:
       minimum: 0
     ProductInput:
       type: object
-      required:
-        [
-          name,
-          boundingPolygon,
-          consumptionLink,
-          productType,
-          consumptionProtocol,
-          resolutionBest,
-          minZoom,
-          maxZoom,
-        ]
+      required: [name, boundingPolygon, consumptionLink, productType, consumptionProtocol, resolutionBest, minZoom, maxZoom]
       properties:
         name:
           type: string
@@ -320,7 +308,7 @@ components:
           type: string
           minLength: 1
         boundingPolygon:
-          $ref: "#/components/schemas/BoundingPolygon"
+          $ref: '#/components/schemas/BoundingPolygon'
         consumptionLink:
           type: string
           format: uri
@@ -336,17 +324,17 @@ components:
           minimum: 0
           description: Best spatial resolution of the product.
         minZoom:
-          $ref: "#/components/schemas/MinZoomLevel"
+          $ref: '#/components/schemas/MinZoomLevel'
         maxZoom:
-          $ref: "#/components/schemas/ZoomLevel"
+          $ref: '#/components/schemas/ZoomLevel'
       description: minZoom must not exceed maxZoom.
     CreateProduct:
       allOf:
-        - $ref: "#/components/schemas/ProductInput"
+        - $ref: '#/components/schemas/ProductInput'
       unevaluatedProperties: false
     Product:
       allOf:
-        - $ref: "#/components/schemas/ProductInput"
+        - $ref: '#/components/schemas/ProductInput'
         - type: object
           required: [id]
           properties:
@@ -369,7 +357,7 @@ components:
           type: string
           minLength: 1
         boundingPolygon:
-          $ref: "#/components/schemas/BoundingPolygon"
+          $ref: '#/components/schemas/BoundingPolygon'
         consumptionLink:
           type: string
           format: uri
@@ -383,9 +371,9 @@ components:
           type: number
           minimum: 0
         minZoom:
-          $ref: "#/components/schemas/MinZoomLevel"
+          $ref: '#/components/schemas/MinZoomLevel'
         maxZoom:
-          $ref: "#/components/schemas/ZoomLevel"
+          $ref: '#/components/schemas/ZoomLevel'
       description: At least one editable field is required. Null values and id are not accepted.
     ProductsPage:
       type: object
@@ -396,7 +384,7 @@ components:
           type: array
           maxItems: 100
           items:
-            $ref: "#/components/schemas/Product"
+            $ref: '#/components/schemas/Product'
         limit:
           type: integer
           minimum: 1
@@ -407,38 +395,36 @@ components:
         hasMore:
           type: boolean
           description: Whether more matching products remain after this page. False for an empty page.
-      description:
-        Results are ordered by id ascending. Continue with offset + limit while hasMore is
+      description: Results are ordered by id ascending. Continue with offset + limit while hasMore is
         true; use the same filters.
     SearchProducts:
       type: object
       additionalProperties: false
       properties:
         equal:
-          $ref: "#/components/schemas/EqualityOperands"
+          $ref: '#/components/schemas/EqualityOperands'
         greater:
-          $ref: "#/components/schemas/NumericOperands"
+          $ref: '#/components/schemas/NumericOperands'
           description: Product value > supplied value.
         greaterEqual:
-          $ref: "#/components/schemas/NumericOperands"
+          $ref: '#/components/schemas/NumericOperands'
           description: Product value >= supplied value.
         less:
-          $ref: "#/components/schemas/NumericOperands"
+          $ref: '#/components/schemas/NumericOperands'
           description: Product value < supplied value.
         lessEqual:
-          $ref: "#/components/schemas/NumericOperands"
+          $ref: '#/components/schemas/NumericOperands'
           description: Product value <= supplied value.
         contains:
-          $ref: "#/components/schemas/SpatialOperands"
+          $ref: '#/components/schemas/SpatialOperands'
           description: The product footprint contains the entire supplied geometry.
         within:
-          $ref: "#/components/schemas/SpatialOperands"
+          $ref: '#/components/schemas/SpatialOperands'
           description: The entire product footprint lies within the supplied geometry.
         intersects:
-          $ref: "#/components/schemas/SpatialOperands"
+          $ref: '#/components/schemas/SpatialOperands'
           description: The shapes share at least one point, including boundary contact.
-      description:
-        Each supplied operator group must contain at least one field. All conditions combine
+      description: Each supplied operator group must contain at least one field. All conditions combine
         with AND.
     EqualityOperands:
       type: object
@@ -470,8 +456,7 @@ components:
         consumptionProtocol:
           type: string
           enum: [WMS, WMTS, XYZ, 3D Tiles]
-      description:
-        Exact equality. Text is case-sensitive; UUIDs compare by value. A missing description
+      description: Exact equality. Text is case-sensitive; UUIDs compare by value. A missing description
         does not match a description filter.
     NumericOperands:
       type: object
@@ -491,17 +476,16 @@ components:
       required: [boundingPolygon]
       properties:
         boundingPolygon:
-          $ref: "#/components/schemas/BoundingPolygon"
+          $ref: '#/components/schemas/BoundingPolygon'
       description: Spatial comparisons use longitude and latitude; height is ignored.
     ZoomLevel:
       type: integer
       exclusiveMinimum: 0
     BoundingPolygon:
       oneOf:
-        - $ref: "#/components/schemas/Polygon"
-        - $ref: "#/components/schemas/MultiPolygon"
-      description:
-        Valid GeoJSON Polygon or MultiPolygon in WGS84 longitude/latitude. Positions must consistently
+        - $ref: '#/components/schemas/Polygon'
+        - $ref: '#/components/schemas/MultiPolygon'
+      description: Valid GeoJSON Polygon or MultiPolygon in WGS84 longitude/latitude. Positions must consistently
         use two or three coordinates. Optional ellipsoidal height is in metres and is preserved. Rings
         must be closed and valid. Either input winding is accepted; responses use counterclockwise exterior
         rings and clockwise holes.
@@ -514,7 +498,7 @@ components:
           type: string
           const: Polygon
         coordinates:
-          $ref: "#/components/schemas/PolygonCoordinates"
+          $ref: '#/components/schemas/PolygonCoordinates'
     MultiPolygon:
       type: object
       additionalProperties: false
@@ -527,18 +511,18 @@ components:
           type: array
           minItems: 1
           items:
-            $ref: "#/components/schemas/PolygonCoordinates"
+            $ref: '#/components/schemas/PolygonCoordinates'
     PolygonCoordinates:
       type: array
       minItems: 1
       items:
-        $ref: "#/components/schemas/LinearRing"
+        $ref: '#/components/schemas/LinearRing'
       description: Exterior ring first, followed by any holes.
     LinearRing:
       type: array
       minItems: 4
       items:
-        $ref: "#/components/schemas/Position"
+        $ref: '#/components/schemas/Position'
     Position:
       type: array
       minItems: 2
