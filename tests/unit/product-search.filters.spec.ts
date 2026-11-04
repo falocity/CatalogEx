@@ -1,8 +1,8 @@
-import { PgDialect } from "drizzle-orm/pg-core";
-import { describe, expect, it } from "vitest";
-import { buildProductSearchConditions } from "../../src/modules/products/product-search.filters.js";
-import type { BoundingPolygon } from "../../src/modules/products/schemas/fields.schema.js";
-import type { SearchProductsInput } from "../../src/modules/products/schemas/search-products.schema.js";
+import { PgDialect } from 'drizzle-orm/pg-core';
+import { describe, expect, it } from 'vitest';
+import { buildProductSearchConditions } from '../../src/modules/products/product-search.filters.js';
+import type { BoundingPolygon } from '../../src/modules/products/schemas/fields.schema.js';
+import type { SearchProductsInput } from '../../src/modules/products/schemas/search-products.schema.js';
 
 const ringXY: [number, number][] = [
   [34, 31],
@@ -12,7 +12,7 @@ const ringXY: [number, number][] = [
 ];
 
 const polygon: BoundingPolygon = {
-  type: "Polygon",
+  type: 'Polygon',
   coordinates: [ringXY],
 };
 
@@ -21,18 +21,18 @@ const dialect = new PgDialect();
 function query(input: SearchProductsInput) {
   const conditions = buildProductSearchConditions(input);
   if (conditions === undefined) {
-    throw new Error("Expected search conditions");
+    throw new Error('Expected search conditions');
   }
 
   return dialect.sqlToQuery(conditions);
 }
 
-describe("product search filters", () => {
-  it("does not add WHERE conditions for an empty search", () => {
+describe('product search filters', () => {
+  it('does not add WHERE conditions for an empty search', () => {
     expect(buildProductSearchConditions({})).toBeUndefined();
   });
 
-  it("parameterizes text and joins text and numeric conditions with AND", () => {
+  it('parameterizes text and joins text and numeric conditions with AND', () => {
     const name = "example' OR TRUE; --";
 
     const result = query({
@@ -45,8 +45,8 @@ describe("product search filters", () => {
     expect(result.sql).toMatch(/\sand\s/i);
   });
 
-  it.each(["equal", "greater", "greaterEqual", "less", "lessEqual"] as const)(
-    "%s parameterizes numeric thresholds beyond the stored integer range",
+  it.each(['equal', 'greater', 'greaterEqual', 'less', 'lessEqual'] as const)(
+    '%s parameterizes numeric thresholds beyond the stored integer range',
     (operator) => {
       const input: SearchProductsInput = {};
       input[operator] = { minZoom: 2_147_483_648 };
@@ -54,20 +54,17 @@ describe("product search filters", () => {
       const result = query(input);
 
       expect(result.params).toEqual([2_147_483_648]);
-      expect(result.sql).not.toContain("2147483648");
-    },
+      expect(result.sql).not.toContain('2147483648');
+    }
   );
 
-  it.each(["contains", "within", "intersects"] as const)(
-    "%s parameterizes GeoJSON",
-    (operator) => {
-      const input: SearchProductsInput = {};
-      input[operator] = { boundingPolygon: polygon };
+  it.each(['contains', 'within', 'intersects'] as const)('%s parameterizes GeoJSON', (operator) => {
+    const input: SearchProductsInput = {};
+    input[operator] = { boundingPolygon: polygon };
 
-      const result = query(input);
+    const result = query(input);
 
-      expect(result.params).toEqual([JSON.stringify(polygon)]);
-      expect(result.sql).not.toContain(JSON.stringify(polygon));
-    },
-  );
+    expect(result.params).toEqual([JSON.stringify(polygon)]);
+    expect(result.sql).not.toContain(JSON.stringify(polygon));
+  });
 });

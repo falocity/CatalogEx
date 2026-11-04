@@ -8,6 +8,7 @@ import type { CreateProduct, ProductIdParams } from './schemas/product.schema.js
 import type { SearchProductsInput } from './schemas/search-products.schema.js';
 import type { UpdateProduct } from './schemas/update-product.schema.js';
 
+/* eslint-disable @typescript-eslint/naming-convention -- Fastify route generics use Body, Params, and Querystring. */
 @injectable()
 export class ProductsController {
   public constructor(@inject(ProductsService) private readonly service: ProductsService) {}
@@ -47,3 +48,4 @@ export class ProductsController {
     return this.service.searchProducts(body, limit, offset);
   };
 }
+/* eslint-enable @typescript-eslint/naming-convention */

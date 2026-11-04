@@ -1,9 +1,9 @@
-import Type from "typebox";
-import { CreateProductSchemaInput } from "./product.schema.js";
+import typebox from 'typebox';
+import { createProductSchemaInput } from './product.schema.js';
 
-export const UpdateProductSchema = Type.Partial(CreateProductSchemaInput, {
+export const updateProductSchema = typebox.Partial(createProductSchemaInput, {
   minProperties: 1,
   additionalProperties: false,
 });
 
-export type UpdateProduct = Type.Static<typeof UpdateProductSchema>;
+export type UpdateProduct = typebox.Static<typeof updateProductSchema>;

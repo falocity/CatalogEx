@@ -8,6 +8,8 @@
   "scripts": {
     "dev": "node --import tsx --import ./src/instrumentation.mts --watch src/index.ts",
     "start": "node --import ./dist/instrumentation.mjs dist/index.js",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
     "typecheck": "tsc --noEmit",
     "clean": "rimraf dist",
     "prebuild": "npm run clean",
@@ -19,7 +21,9 @@
     "test": "vitest run",
     "test:watch": "vitest watch",
     "test:unit": "vitest run --coverage.enabled=false --project unit",
-    "test:integration": "vitest run --coverage.enabled=false --project integration"
+    "test:integration": "vitest run --coverage.enabled=false --project integration",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "keywords": [],
   "author": "",
@@ -52,6 +56,7 @@
     "@types/node": "^22.20.5",
     "@types/pg": "^8.23.1",
     "@vitest/coverage-v8": "^4.1.12",
+    "@vitest/eslint-plugin": "1.6.27",
     "@vitest/ui": "^4.1.12",
     "drizzle-kit": "^0.31.11",
     "eslint": "^10.14.0",

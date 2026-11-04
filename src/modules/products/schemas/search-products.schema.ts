@@ -1,25 +1,21 @@
-import Type from "typebox";
-import {
-  EqualityOperandsSchema,
-  NumericOperandsSchema,
-  SpatialOperandsSchema,
-} from "./filter-operators.schema.js";
+import typebox from 'typebox';
+import { equalityOperandsSchema, numericOperandsSchema, spatialOperandsSchema } from './filter-operators.schema.js';
 
-export const SearchProductsSchema = Type.Object(
+export const searchProductsSchema = typebox.Object(
   {
-    equal: Type.Optional(EqualityOperandsSchema),
-    greater: Type.Optional(NumericOperandsSchema),
-    greaterEqual: Type.Optional(NumericOperandsSchema),
-    less: Type.Optional(NumericOperandsSchema),
-    lessEqual: Type.Optional(NumericOperandsSchema),
+    equal: typebox.Optional(equalityOperandsSchema),
+    greater: typebox.Optional(numericOperandsSchema),
+    greaterEqual: typebox.Optional(numericOperandsSchema),
+    less: typebox.Optional(numericOperandsSchema),
+    lessEqual: typebox.Optional(numericOperandsSchema),
 
-    contains: Type.Optional(SpatialOperandsSchema),
-    within: Type.Optional(SpatialOperandsSchema),
-    intersects: Type.Optional(SpatialOperandsSchema),
+    contains: typebox.Optional(spatialOperandsSchema),
+    within: typebox.Optional(spatialOperandsSchema),
+    intersects: typebox.Optional(spatialOperandsSchema),
   },
   {
     additionalProperties: false,
-  },
+  }
 );
 
-export type SearchProductsInput = Type.Static<typeof SearchProductsSchema>;
+export type SearchProductsInput = typebox.Static<typeof searchProductsSchema>;
