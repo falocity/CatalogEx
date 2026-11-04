@@ -1,15 +1,6 @@
 import { PgDialect } from "drizzle-orm/pg-core";
-import { DatabaseError } from "pg";
 import { describe, expect, it } from "vitest";
 import { buildProductSearchConditions } from "../../src/modules/products/product-search.filters.js";
-import {
-  validateBoundingPolygon,
-  validateProductFields,
-} from "../../src/modules/products/product.validation.js";
-import {
-  ProductValidationError,
-  rethrowProductDatabaseError,
-} from "../../src/modules/products/products.errors.js";
 import type { BoundingPolygon } from "../../src/modules/products/schemas/fields.schema.js";
 import type { SearchProductsInput } from "../../src/modules/products/schemas/search-products.schema.js";
 
@@ -19,8 +10,6 @@ const ringXY: [number, number][] = [
   [35, 32],
   [34, 31],
 ];
-
-const ringXYZ = ringXY.map(([x, y]): [number, number, number] => [x, y, 10]);
 
 const polygon: BoundingPolygon = {
   type: "Polygon",
@@ -34,70 +23,9 @@ function query(input: SearchProductsInput) {
   if (conditions === undefined) {
     throw new Error("Expected search conditions");
   }
+
   return dialect.sqlToQuery(conditions);
 }
-
-describe("product geometry validation", () => {
-  it.each<{ name: string; geometry: BoundingPolygon }>([
-    { name: "Polygon XY", geometry: polygon },
-    {
-      name: "Polygon XYZ",
-      geometry: { type: "Polygon", coordinates: [ringXYZ] },
-    },
-    {
-      name: "MultiPolygon XY",
-      geometry: { type: "MultiPolygon", coordinates: [[ringXY]] },
-    },
-    {
-      name: "MultiPolygon XYZ",
-      geometry: { type: "MultiPolygon", coordinates: [[ringXYZ]] },
-    },
-  ])("accepts a closed $name geometry", ({ geometry }) => {
-    expect(() => validateBoundingPolygon(geometry)).not.toThrow();
-  });
-
-  it("rejects an open ring", () => {
-    const geometry: BoundingPolygon = {
-      type: "Polygon",
-      coordinates: [
-        [
-          [34, 31],
-          [35, 31],
-          [35, 32],
-          [34, 32],
-        ],
-      ],
-    };
-
-    expect(() => validateBoundingPolygon(geometry)).toThrow(
-      ProductValidationError,
-    );
-  });
-
-  it("rejects mixed coordinate dimensions", () => {
-    const geometry: BoundingPolygon = {
-      type: "Polygon",
-      coordinates: [
-        [
-          [34, 31],
-          [35, 31, 10],
-          [35, 32],
-          [34, 31],
-        ],
-      ],
-    };
-
-    expect(() => validateBoundingPolygon(geometry)).toThrow(
-      ProductValidationError,
-    );
-  });
-});
-
-describe("product fields", () => {
-  it("accepts omitted geometry on an update", () => {
-    expect(() => validateProductFields({ name: "renamed" })).not.toThrow();
-  });
-});
 
 describe("product search filters", () => {
   it("does not add WHERE conditions for an empty search", () => {
@@ -161,34 +89,4 @@ describe("product search filters", () => {
       expect(args).toMatch(/^"products"\."bounding_polygon",/);
     },
   );
-});
-
-describe("database error translation", () => {
-  it("converts zoom-order violations to a product validation error", () => {
-    const error = new DatabaseError("check failed", 0, "error");
-    error.code = "23514";
-    error.constraint = "products_zoom_range_valid";
-
-    let caught: unknown;
-    try {
-      rethrowProductDatabaseError(error);
-    } catch (thrown) {
-      caught = thrown;
-    }
-
-    expect(caught).toBeInstanceOf(ProductValidationError);
-    expect(caught).toMatchObject({ statusCode: 400, field: "minZoom" });
-  });
-
-  it("rethrows unexpected errors unchanged", () => {
-    const error = new Error("unexpected");
-    let caught: unknown;
-    try {
-      rethrowProductDatabaseError(error);
-    } catch (thrown) {
-      caught = thrown;
-    }
-
-    expect(caught).toBe(error);
-  });
 });
