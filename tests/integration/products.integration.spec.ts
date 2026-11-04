@@ -5,7 +5,7 @@ import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { buildApp } from "../../src/app.js";
-import { initConfig } from "../../src/common/config.js";
+import { getConfig, initConfig } from "../../src/common/config.js";
 import { SERVICES } from "../../src/common/constants.js";
 import type { BoundingPolygon } from "../../src/modules/products/schemas/fields.schema.js";
 import type { ProductsPage } from "../../src/modules/products/schemas/pagination.schema.js";
@@ -22,6 +22,8 @@ import {
   withProductTest,
 } from "../helpers/products.js";
 import { ProductsRequestSender } from "../helpers/productsRequestSender.js";
+import { spawn } from "node:child_process";
+import { createServer } from "node:http";
 
 describe("products API", () => {
   describe("Happy Path", () => {
@@ -136,74 +138,151 @@ describe("products API", () => {
   });
 });
 
-describe("health routes", () => {
+async function unusedPort(): Promise<number> {
+  const server = createServer();
+
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+
+  const address = server.address();
+  if (!address || typeof address === "string") {
+    throw new Error("Could not allocate a test port");
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => (error ? reject(error) : resolve()));
+  });
+
+  return address.port;
+}
+
+async function withRunningServer(
+  databasePort: number,
+  run: (baseUrl: string) => Promise<void>,
+): Promise<void> {
+  const port = await unusedPort();
+  const baseUrl = `http://127.0.0.1:${port}`;
+
+  const child = spawn(
+    process.execPath,
+    [
+      "--import",
+      "tsx",
+      "--import",
+      "./src/instrumentation.mts",
+      "src/index.ts",
+    ],
+    {
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        NODE_ENV: "test",
+        HOST: "127.0.0.1",
+        PORT: String(port),
+        POSTGRES_PORT: String(databasePort),
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
+
+  let output = "";
+  child.stdout.on("data", (chunk: Buffer) => {
+    output += chunk.toString();
+  });
+  child.stderr.on("data", (chunk: Buffer) => {
+    output += chunk.toString();
+  });
+
+  const stopped = new Promise<void>((resolve) => {
+    child.once("exit", () => resolve());
+  });
+
+  try {
+    let listening = false;
+
+    for (let attempt = 0; attempt < 100; attempt++) {
+      if (child.exitCode !== null) {
+        throw new Error(`Server exited before listening:\n${output}`);
+      }
+
+      try {
+        const response = await fetch(`${baseUrl}/health/live`, {
+          signal: AbortSignal.timeout(300),
+        });
+
+        if (response.ok) {
+          listening = true;
+          break;
+        }
+      } catch {
+        // The server may still be starting.
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    if (!listening) {
+      throw new Error(`Server did not start:\n${output}`);
+    }
+
+    await run(baseUrl);
+  } finally {
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill("SIGTERM");
+
+      const timeout = setTimeout(() => {
+        child.kill("SIGKILL");
+      }, 5_000);
+
+      try {
+        await stopped;
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+  }
+}
+
+describe("health checks", () => {
   beforeAll(async () => {
     await initConfig();
   });
 
   describe("Happy Path", () => {
-    it("does not call database readiness for liveness", async () => {
-      const checkDatabase = vi.fn(async () => {
-        throw new Error("unavailable");
+    it("returns live and ready when the database is available", async () => {
+      const databasePort = getConfig().get("database.port");
+
+      await withRunningServer(databasePort, async (baseUrl) => {
+        const live = await fetch(`${baseUrl}/health/live`);
+        expect(live.status).toBe(StatusCodes.OK);
+        expect(await live.json()).toEqual({ status: "ok" });
+
+        const ready = await fetch(`${baseUrl}/health/ready`);
+        expect(ready.status).toBe(StatusCodes.OK);
+        expect(await ready.json()).toEqual({ status: "ok" });
       });
-      const { app } = await buildApp(
-        { logger: false },
-        {
-          override: [
-            {
-              token: SERVICES.DATABASE_READINESS,
-              provider: { useValue: checkDatabase },
-            },
-          ],
-        },
-      );
-
-      try {
-        const response = await app.inject({
-          method: "GET",
-          url: "/health/live",
-        });
-
-        expect(response.statusCode).toBe(StatusCodes.OK);
-        expect(response.json()).toEqual({ status: "ok" });
-        expect(checkDatabase).not.toHaveBeenCalled();
-      } finally {
-        await app.close();
-      }
-    });
+    }, 20_000);
   });
 
   describe("Sad Path", () => {
-    it("returns 503 without database details on readiness failure", async () => {
-      const checkDatabase = vi.fn(async () => {
-        throw new Error("private database error");
+    it("stays live but returns 503 when the database is unavailable", async () => {
+      const unavailableDatabasePort = await unusedPort();
+
+      await withRunningServer(unavailableDatabasePort, async (baseUrl) => {
+        const live = await fetch(`${baseUrl}/health/live`);
+        expect(live.status).toBe(StatusCodes.OK);
+        expect(await live.json()).toEqual({ status: "ok" });
+
+        const ready = await fetch(`${baseUrl}/health/ready`);
+        expect(ready.status).toBe(StatusCodes.SERVICE_UNAVAILABLE);
+
+        const body = await ready.text();
+        expect(JSON.parse(body)).toEqual({ status: "not_ready" });
+        expect(body).not.toContain("Connection terminated");
       });
-      const { app } = await buildApp(
-        { logger: false },
-        {
-          override: [
-            {
-              token: SERVICES.DATABASE_READINESS,
-              provider: { useValue: checkDatabase },
-            },
-          ],
-        },
-      );
-
-      try {
-        const response = await app.inject({
-          method: "GET",
-          url: "/health/ready",
-        });
-
-        expect(checkDatabase).toHaveBeenCalledOnce();
-        expect(response.statusCode).toBe(StatusCodes.SERVICE_UNAVAILABLE);
-        expect(response.json()).toEqual({ status: "not_ready" });
-        expect(response.body).not.toContain("private database error");
-      } finally {
-        await app.close();
-      }
-    });
+    }, 20_000);
   });
 });
 
