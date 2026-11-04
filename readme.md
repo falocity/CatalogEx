@@ -112,3 +112,21 @@ Listing and search return `items`, `limit`, `offset`, and `hasMore`. The default
 ## Database changes
 
 After changing `src/db/schema.ts`, run `npm run db:generate`, review the generated SQL, and commit the SQL and Drizzle metadata together. Apply committed migrations with `npm run db:migrate`.
+
+### Container images
+
+Build the API and migration images from the same revision:
+
+```bash
+docker build -t catalogex-service .
+docker build -f migrations.Dockerfile -t catalogex-migrations .
+```
+
+Run the migration image as a one-off job before starting or updating the API. Both images take the same `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD` settings at runtime. Use a database hostname reachable from the container. For example, replace the network and private env file below with your own values:
+
+```bash
+docker run --rm --network catalogex-db-network --env-file "$HOME/.config/catalogex/postgres.env" catalogex-migrations &&
+docker run --rm --network catalogex-db-network --env-file "$HOME/.config/catalogex/postgres.env" -p 8080:8080 catalogex-service
+```
+
+Start the service image after the migration exits successfully. Only the migration image contains the SQL migration files.
