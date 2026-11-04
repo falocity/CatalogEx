@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { StatusCodes } from "http-status-codes";
 import type { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { buildApp } from "../../src/app.js";
 import { initConfig } from "../../src/common/config.js";
@@ -669,5 +669,76 @@ describe("product request validation", () => {
         );
       },
     );
+  });
+});
+
+describe("health routes", () => {
+  beforeAll(async () => {
+    await initConfig();
+  });
+
+  describe("Happy Path", () => {
+    it("does not call database readiness for liveness", async () => {
+      const checkDatabase = vi.fn(async () => {
+        throw new Error("unavailable");
+      });
+      const { app } = await buildApp(
+        { logger: false },
+        {
+          override: [
+            {
+              token: SERVICES.DATABASE_READINESS,
+              provider: { useValue: checkDatabase },
+            },
+          ],
+        },
+      );
+
+      try {
+        const response = await app.inject({
+          method: "GET",
+          url: "/health/live",
+        });
+
+        expect(response.statusCode).toBe(StatusCodes.OK);
+        expect(response.json()).toEqual({ status: "ok" });
+        expect(checkDatabase).not.toHaveBeenCalled();
+      } finally {
+        await app.close();
+      }
+    });
+  });
+
+  describe("Sad Path", () => {
+    it("returns 503 without database details on readiness failure", async () => {
+      const checkDatabase = vi.fn(async () => {
+        throw new Error("private database error");
+      });
+      const { app } = await buildApp(
+        { logger: false },
+        {
+          override: [
+            {
+              token: SERVICES.DATABASE_READINESS,
+              provider: { useValue: checkDatabase },
+            },
+          ],
+        },
+      );
+
+      try {
+        const response = await app.inject({
+          method: "GET",
+          url: "/health/ready",
+        });
+
+        expect(checkDatabase).toHaveBeenCalledOnce();
+        expect(response.statusCode).toBe(StatusCodes.SERVICE_UNAVAILABLE);
+        expect(response.json()).toEqual({ status: "not_ready" });
+        expect(response.body).not.toContain("private database error");
+      } finally {
+        await app.close();
+      }
+    });
   });
 });

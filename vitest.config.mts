@@ -9,7 +9,7 @@ export default defineConfig({
           name: "unit",
           environment: "node",
           setupFiles: ["./tests/setup.mts"],
-          include: ["tests/unit/**/*.test.ts"],
+          include: ["tests/unit/**/*.spec.ts"],
         },
       },
       {
@@ -17,7 +17,7 @@ export default defineConfig({
           name: "integration",
           environment: "node",
           setupFiles: ["./tests/setup.mts"],
-          include: ["tests/integration/**/*.test.ts"],
+          include: ["tests/integration/**/*.spec.ts"],
         },
       },
     ],
