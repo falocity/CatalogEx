@@ -26,7 +26,6 @@ RUN npm ci --omit=dev
 
 COPY --chown=node:node --from=build /tmp/buildApp/dist ./dist
 COPY --chown=node:node --from=build /tmp/buildApp/config ./config
-COPY --chown=node:node --from=build /tmp/buildApp/drizzle ./drizzle
 
 USER node
 

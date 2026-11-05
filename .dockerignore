@@ -6,6 +6,8 @@ dist
 
 .env
 .env.*
+config/local*.json
+compose.yaml
 
 tests
 **/*.test.ts
