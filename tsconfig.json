@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
-    "rootDir": "./src",
+    "rootDir": ".",
     "outDir": "./dist",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
 
     "module": "NodeNext",
     "target": "ES2022",
@@ -21,5 +23,12 @@
     "moduleDetection": "force",
     "skipLibCheck": true
   },
-  "include": ["src/**/*.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.mts",
+    "tests/**/*.ts",
+    "tests/**/*.mts",
+    "drizzle.config.ts",
+    "vitest.config.mts"
+  ]
 }

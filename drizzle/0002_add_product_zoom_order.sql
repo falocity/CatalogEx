@@ -1,0 +1,1 @@
+ALTER TABLE "products" ADD CONSTRAINT "products_zoom_range_valid" CHECK ("products"."min_zoom" <= "products"."max_zoom");

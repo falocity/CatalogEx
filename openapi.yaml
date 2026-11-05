@@ -1,0 +1,659 @@
+openapi: 3.1.0
+info:
+  title: Geospatial Products Catalog
+  version: 0.3.0
+  description: Draft contract for managing and searching geospatial products.
+servers:
+  - url: /
+tags: [{ name: Products }]
+paths:
+  /products:
+    post:
+      tags: [Products]
+      operationId: createProduct
+      summary: Create a product
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateProductResponse"
+              examples:
+                example:
+                  $ref: "#/components/examples/CreateProductResponse"
+          headers:
+            Location:
+              required: true
+              schema:
+                type: string
+                format: uri-reference
+              description: Retrieval URI of the created product.
+          description: Product created.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "415":
+          $ref: "#/components/responses/UnsupportedMediaType"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProduct"
+            examples:
+              example:
+                $ref: "#/components/examples/CreateProduct"
+      description: Creates a product with a server-generated UUID.
+    get:
+      tags: [Products]
+      operationId: listProducts
+      summary: List products
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductsPage"
+              examples:
+                example:
+                  $ref: "#/components/examples/ProductsPage"
+          description: Product page.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      description: Returns an unfiltered page. No results return an empty items array.
+  /products/{id}:
+    get:
+      tags: [Products]
+      operationId: getProductById
+      summary: Retrieve a product
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+              examples:
+                example:
+                  $ref: "#/components/examples/Product"
+          description: Product found.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      parameters:
+        - $ref: "#/components/parameters/ProductId"
+      description: Returns the product identified by its UUID.
+    patch:
+      tags: [Products]
+      operationId: updateProduct
+      summary: Partially update a product
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+              examples:
+                example:
+                  $ref: "#/components/examples/UpdatedProduct"
+          description: Product updated.
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "415":
+          $ref: "#/components/responses/UnsupportedMediaType"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      parameters:
+        - $ref: "#/components/parameters/ProductId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProduct"
+            examples:
+              example:
+                $ref: "#/components/examples/UpdateProduct"
+      description:
+        Updates supplied fields atomically; omitted fields remain unchanged. A supplied geometry
+        replaces the whole geometry. The resulting product must satisfy the product constraints.
+    delete:
+      tags: [Products]
+      operationId: deleteProduct
+      summary: Delete a product
+      responses:
+        "204":
+          description: Product deleted. No response body.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      parameters:
+        - $ref: "#/components/parameters/ProductId"
+      description: Deletes the product. A missing product returns 404.
+  /products/search:
+    post:
+      tags: [Products]
+      operationId: searchProducts
+      summary: Search products
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductsPage"
+              examples:
+                example:
+                  $ref: "#/components/examples/ProductsPage"
+          description: Matching product page.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "415":
+          $ref: "#/components/responses/UnsupportedMediaType"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchProducts"
+            examples:
+              example:
+                $ref: "#/components/examples/SearchProducts"
+      description:
+        Read-only search. All conditions combine with AND. An empty object lists products without
+        filtering. No matches return an empty items array.
+components:
+  parameters:
+    ProductId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Product UUID; hexadecimal letter case does not affect matching.
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      description: Maximum products per page.
+    Offset:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+      description: Number of matching products to skip.
+  responses:
+    BadRequest:
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/ApiError"
+              - type: object
+                properties:
+                  code:
+                    const: VALIDATION_ERROR
+          example:
+            code: VALIDATION_ERROR
+            message: name must contain between 1 and 48 characters.
+            field: name
+      description: Invalid JSON, parameters, product data, or geometry.
+    NotFound:
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/ApiError"
+              - type: object
+                properties:
+                  code:
+                    const: PRODUCT_NOT_FOUND
+          example:
+            code: PRODUCT_NOT_FOUND
+            message: Product not found.
+            field: id
+      description: Product not found.
+    PayloadTooLarge:
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/ApiError"
+              - type: object
+                properties:
+                  code:
+                    const: PAYLOAD_TOO_LARGE
+          example:
+            code: PAYLOAD_TOO_LARGE
+            message: Request body is too large.
+      description: Request body too large.
+    UnsupportedMediaType:
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/ApiError"
+              - type: object
+                properties:
+                  code:
+                    const: UNSUPPORTED_MEDIA_TYPE
+          example:
+            code: UNSUPPORTED_MEDIA_TYPE
+            message: Content-Type must be application/json.
+      description: Content-Type must be application/json.
+    InternalServerError:
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/ApiError"
+              - type: object
+                properties:
+                  code:
+                    const: INTERNAL_ERROR
+          example:
+            code: INTERNAL_ERROR
+            message: An unexpected error occurred.
+      description: Unexpected server error.
+  schemas:
+    CreateProductResponse:
+      type: object
+      additionalProperties: false
+      required: [id]
+      properties:
+        id:
+          type: string
+          format: uuid
+
+    MinZoomLevel:
+      type: integer
+      minimum: 0
+    ProductInput:
+      type: object
+      required:
+        [
+          name,
+          boundingPolygon,
+          consumptionLink,
+          productType,
+          consumptionProtocol,
+          resolutionBest,
+          minZoom,
+          maxZoom,
+        ]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 48
+        description:
+          type: string
+          minLength: 1
+        boundingPolygon:
+          $ref: "#/components/schemas/BoundingPolygon"
+        consumptionLink:
+          type: string
+          format: uri
+          description: Product consumption URI.
+        productType:
+          type: string
+          enum: [raster, rasterized vector, 3d tiles, QMesh]
+        consumptionProtocol:
+          type: string
+          enum: [WMS, WMTS, XYZ, 3D Tiles]
+        resolutionBest:
+          type: number
+          minimum: 0
+          description: Best spatial resolution of the product.
+        minZoom:
+          $ref: "#/components/schemas/MinZoomLevel"
+        maxZoom:
+          $ref: "#/components/schemas/ZoomLevel"
+      description: minZoom must not exceed maxZoom.
+    CreateProduct:
+      allOf:
+        - $ref: "#/components/schemas/ProductInput"
+      unevaluatedProperties: false
+    Product:
+      allOf:
+        - $ref: "#/components/schemas/ProductInput"
+        - type: object
+          required: [id]
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+      unevaluatedProperties: false
+      description: Product with a server-generated UUID. Unset description is omitted.
+    UpdateProduct:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 48
+        description:
+          type: string
+          minLength: 1
+        boundingPolygon:
+          $ref: "#/components/schemas/BoundingPolygon"
+        consumptionLink:
+          type: string
+          format: uri
+        productType:
+          type: string
+          enum: [raster, rasterized vector, 3d tiles, QMesh]
+        consumptionProtocol:
+          type: string
+          enum: [WMS, WMTS, XYZ, 3D Tiles]
+        resolutionBest:
+          type: number
+          minimum: 0
+        minZoom:
+          $ref: "#/components/schemas/MinZoomLevel"
+        maxZoom:
+          $ref: "#/components/schemas/ZoomLevel"
+      description: At least one editable field is required. Null values and id are not accepted.
+    ProductsPage:
+      type: object
+      additionalProperties: false
+      required: [items, limit, offset, hasMore]
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/Product"
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+        hasMore:
+          type: boolean
+          description: Whether more matching products remain after this page. False for an empty page.
+      description:
+        Results are ordered by id ascending. Continue with offset + limit while hasMore is
+        true; use the same filters.
+    SearchProducts:
+      type: object
+      additionalProperties: false
+      properties:
+        equal:
+          $ref: "#/components/schemas/EqualityOperands"
+        greater:
+          $ref: "#/components/schemas/NumericOperands"
+          description: Product value > supplied value.
+        greaterEqual:
+          $ref: "#/components/schemas/NumericOperands"
+          description: Product value >= supplied value.
+        less:
+          $ref: "#/components/schemas/NumericOperands"
+          description: Product value < supplied value.
+        lessEqual:
+          $ref: "#/components/schemas/NumericOperands"
+          description: Product value <= supplied value.
+        contains:
+          $ref: "#/components/schemas/SpatialOperands"
+          description: The product footprint contains the entire supplied geometry.
+        within:
+          $ref: "#/components/schemas/SpatialOperands"
+          description: The entire product footprint lies within the supplied geometry.
+        intersects:
+          $ref: "#/components/schemas/SpatialOperands"
+          description: The shapes share at least one point, including boundary contact.
+      description:
+        Each supplied operator group must contain at least one field. All conditions combine
+        with AND.
+    EqualityOperands:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        resolutionBest:
+          type: number
+        minZoom:
+          type: integer
+        maxZoom:
+          type: integer
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 48
+        description:
+          type: string
+          minLength: 1
+        consumptionLink:
+          type: string
+          format: uri
+        productType:
+          type: string
+          enum: [raster, rasterized vector, 3d tiles, QMesh]
+        consumptionProtocol:
+          type: string
+          enum: [WMS, WMTS, XYZ, 3D Tiles]
+      description:
+        Exact equality. Text is case-sensitive; UUIDs compare by value. A missing description
+        does not match a description filter.
+    NumericOperands:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        resolutionBest:
+          type: number
+        minZoom:
+          type: integer
+        maxZoom:
+          type: integer
+      description: Comparison thresholds; stored-value minimum bounds do not apply.
+    SpatialOperands:
+      type: object
+      additionalProperties: false
+      required: [boundingPolygon]
+      properties:
+        boundingPolygon:
+          $ref: "#/components/schemas/BoundingPolygon"
+      description: Spatial comparisons use longitude and latitude; height is ignored.
+    ZoomLevel:
+      type: integer
+      exclusiveMinimum: 0
+    BoundingPolygon:
+      oneOf:
+        - $ref: "#/components/schemas/Polygon"
+        - $ref: "#/components/schemas/MultiPolygon"
+      description:
+        Valid GeoJSON Polygon or MultiPolygon in WGS84 longitude/latitude. Positions must consistently
+        use two or three coordinates. Optional ellipsoidal height is in metres and is preserved. Rings
+        must be closed and valid. Either input winding is accepted; responses use counterclockwise exterior
+        rings and clockwise holes.
+    Polygon:
+      type: object
+      additionalProperties: false
+      required: [type, coordinates]
+      properties:
+        type:
+          type: string
+          const: Polygon
+        coordinates:
+          $ref: "#/components/schemas/PolygonCoordinates"
+    MultiPolygon:
+      type: object
+      additionalProperties: false
+      required: [type, coordinates]
+      properties:
+        type:
+          type: string
+          const: MultiPolygon
+        coordinates:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/PolygonCoordinates"
+    PolygonCoordinates:
+      type: array
+      minItems: 1
+      items:
+        $ref: "#/components/schemas/LinearRing"
+      description: Exterior ring first, followed by any holes.
+    LinearRing:
+      type: array
+      minItems: 4
+      items:
+        $ref: "#/components/schemas/Position"
+    Position:
+      type: array
+      minItems: 2
+      maxItems: 3
+      prefixItems:
+        - type: number
+          minimum: -180
+          maximum: 180
+        - type: number
+          minimum: -90
+          maximum: 90
+        - type: number
+      items: false
+    ApiError:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+          description: Human-readable explanation; wording may vary.
+        field:
+          type: string
+          description: Input field associated with the error, when applicable.
+  examples:
+    CreateProductResponse:
+      summary: Identifier of the created product
+      value:
+        id: 550e8400-e29b-41d4-a716-446655440000
+    CreateProduct:
+      summary: retrieved product
+      value:
+        name: Ramla aerial imagery
+        description: Example geospatial product
+        boundingPolygon:
+          type: Polygon
+          coordinates:
+            - - [34.85, 31.9]
+              - [34.9, 31.9]
+              - [34.9, 31.95]
+              - [34.85, 31.95]
+              - [34.85, 31.9]
+        consumptionLink: https://example.com/wmts
+        productType: raster
+        consumptionProtocol: WMTS
+        resolutionBest: 0.5
+        minZoom: 1
+        maxZoom: 18
+    Product:
+      summary: Created or retrieved product
+      value:
+        id: 550e8400-e29b-41d4-a716-446655440000
+        name: Ramla aerial imagery
+        description: Example geospatial product
+        boundingPolygon:
+          type: Polygon
+          coordinates:
+            - - [34.85, 31.9]
+              - [34.9, 31.9]
+              - [34.9, 31.95]
+              - [34.85, 31.95]
+              - [34.85, 31.9]
+        consumptionLink: https://example.com/wmts
+        productType: raster
+        consumptionProtocol: WMTS
+        resolutionBest: 0.5
+        minZoom: 1
+        maxZoom: 18
+    UpdateProduct:
+      summary: Update the description
+      value:
+        description: Updated product description
+    UpdatedProduct:
+      summary: Updated product
+      value:
+        id: 550e8400-e29b-41d4-a716-446655440000
+        name: Ramla aerial imagery
+        boundingPolygon:
+          type: Polygon
+          coordinates:
+            - - [34.85, 31.9]
+              - [34.9, 31.9]
+              - [34.9, 31.95]
+              - [34.85, 31.95]
+              - [34.85, 31.9]
+        consumptionLink: https://example.com/wmts
+        productType: raster
+        consumptionProtocol: WMTS
+        resolutionBest: 0.5
+        minZoom: 1
+        maxZoom: 18
+        description: Updated product description
+    ProductsPage:
+      summary: An empty page
+      value:
+        items: []
+        limit: 20
+        offset: 0
+        hasMore: false
+    SearchProducts:
+      summary: Raster WMTS products with a resolution threshold and intersecting footprint
+      value:
+        equal:
+          productType: raster
+          consumptionProtocol: WMTS
+        lessEqual:
+          resolutionBest: 1
+        intersects:
+          boundingPolygon:
+            type: Polygon
+            coordinates:
+              - - [34.85, 31.9]
+                - [34.9, 31.9]
+                - [34.9, 31.95]
+                - [34.85, 31.95]
+                - [34.85, 31.9]
