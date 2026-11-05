@@ -31,5 +31,3 @@ export function registerDependencies(
 
   return container;
 }
-
-export const cachedFactory = tsyringe.instancePerContainerCachingFactory;
