@@ -1,3 +1,3 @@
 module.exports = {
-  extends: ["@map-colonies/commitlint-config"],
+  extends: ['@map-colonies/commitlint-config'],
 };

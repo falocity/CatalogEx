@@ -1,14 +1,15 @@
-import { createTerminus } from "@godaddy/terminus";
-import { CleanupRegistry } from "@map-colonies/cleanup-registry";
-import type { Logger } from "@map-colonies/js-logger";
+import { createTerminus } from '@godaddy/terminus';
+import type { CleanupRegistry } from '@map-colonies/cleanup-registry';
+import type { Logger } from '@map-colonies/js-logger';
 
-import { buildApp } from "./app.js";
-import type { ConfigType } from "./common/config.js";
-import { SERVICES } from "./common/constants.js";
-import type { DatabaseReadiness } from "./db/client.js";
+import { buildApp } from './app.js';
+import type { ConfigType } from './common/config.js';
+import { SERVICES } from './common/constants.js';
+import type { DatabaseReadiness } from './db/client.js';
 
 let logger: Logger | undefined;
 let onSignal: (() => Promise<void>) | undefined;
+const SHUTDOWN_GRACE_MS = 1000;
 
 try {
   const { app, container } = await buildApp();
@@ -16,49 +17,45 @@ try {
 
   const config = container.resolve<ConfigType>(SERVICES.CONFIG);
   onSignal = container.resolve<() => Promise<void>>(SERVICES.ON_SIGNAL);
-  const checkDatabase = container.resolve<DatabaseReadiness>(
-    SERVICES.DATABASE_READINESS,
-  );
+  const checkDatabase = container.resolve<DatabaseReadiness>(SERVICES.DATABASE_READINESS);
 
-  const registry = container.resolve<CleanupRegistry>(
-    SERVICES.CLEANUP_REGISTRY,
-  );
-  registry.on("finished", (status) => {
-    if (status !== "success") {
-      logger?.error({ status }, "Server shutdown did not complete");
+  const registry = container.resolve<CleanupRegistry>(SERVICES.CLEANUP_REGISTRY);
+  registry.on('finished', (status) => {
+    if (status !== 'success') {
+      logger?.error({ status }, 'Server shutdown did not complete');
       process.exit(1);
     }
   });
 
   createTerminus(app.server, {
     healthChecks: {
-      "/health/live": async (): Promise<void> => {},
-      "/health/ready": async (): Promise<void> => {
+      '/health/live': async (): Promise<void> => {},
+      '/health/ready': async (): Promise<void> => {
         try {
           await checkDatabase();
         } catch (error) {
-          logger?.warn({ err: error }, "Database readiness check failed");
+          logger?.warn({ err: error }, 'Database readiness check failed');
           throw error;
         }
       },
     },
-    statusErrorResponse: { status: "not_ready" },
-    signal: "SIGTERM",
-    signals: ["SIGINT"],
-    timeout: config.get("server.shutdownTimeoutMs") + 1000,
+    statusErrorResponse: { status: 'not_ready' },
+    signal: 'SIGTERM',
+    signals: ['SIGINT'],
+    timeout: config.get('server.shutdownTimeoutMs') + SHUTDOWN_GRACE_MS,
     useExit0: true,
     onSignal,
   });
 
   await app.listen({
-    port: config.get("server.port"),
-    host: config.get("server.host"),
+    port: config.get('server.port'),
+    host: config.get('server.host'),
   });
 } catch (error) {
   if (logger) {
-    logger.error({ err: error }, "Server startup failed");
+    logger.error({ err: error }, 'Server startup failed');
   } else {
-    console.error("Server startup failed", error);
+    console.error('Server startup failed', error);
   }
 
   process.exitCode = 1;
@@ -66,7 +63,7 @@ try {
     try {
       await onSignal();
     } catch (cleanupError) {
-      logger?.error({ err: cleanupError }, "Server startup cleanup failed");
+      logger?.error({ err: cleanupError }, 'Server startup cleanup failed');
     }
   }
 }
