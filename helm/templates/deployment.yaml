@@ -1,0 +1,91 @@
+{{- $releaseName := .Release.Name -}}
+{{- $chartName := include "catalogex.name" . -}}
+{{- $cloudProviderFlavor := include "catalogex.cloudProviderFlavor" . -}}
+{{- $cloudProviderDockerRegistryUrl := include "catalogex.cloudProviderDockerRegistryUrl" . -}}
+{{- $tag := include "catalogex.tag" . -}}
+{{- if .Values.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $releaseName }}-{{ $chartName }}
+  labels:
+    app: {{ $chartName }}
+    component: {{ $chartName }}
+    environment: {{ include "catalogex.environment" . }}
+    release: {{ $releaseName }}
+    {{- include "catalogex.labels" . | nindent 4 }}
+{{- with .Values.annotations }}
+  annotations:
+{{ toYaml . | indent 4 }}
+{{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ $chartName }}
+      release: {{ $releaseName }}
+      run: {{ $releaseName }}-{{ $chartName }}
+      {{- include "catalogex.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app: {{ $chartName }}
+        release: {{ $releaseName }}
+        run: {{ $releaseName }}-{{ $chartName }}
+        {{- include "catalogex.selectorLabels" . | nindent 8 }}
+      annotations:
+{{- with .Values.podAnnotations }}
+{{ toYaml . | indent 8 }}
+{{- end }}
+    spec:
+      containers:
+        - name: {{ $releaseName }}-{{ $chartName }}-deployment
+          {{- with .Values.image }}
+          {{- if ne $cloudProviderFlavor "minikube" }}
+          image: {{ $cloudProviderDockerRegistryUrl }}/{{ .repository }}:{{ $tag }}
+          {{- else }}
+          image: {{ .repository }}:{{ $tag }}
+          {{- end }}
+          {{- end }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: {{ $releaseName }}-{{ $chartName }}-configmap
+            - secretRef:
+                name: {{ $releaseName }}-{{ $chartName }}-secret
+          env:
+            - name: PORT
+              value: {{ .Values.env.targetPort | quote }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.env.targetPort }}
+              protocol: {{ .Values.env.protocol }}
+          livenessProbe:
+            initialDelaySeconds: {{ .Values.initialDelaySeconds }}
+            timeoutSeconds: 2
+            httpGet:
+              path: /health/live
+              port: http
+          readinessProbe:
+            initialDelaySeconds: {{ .Values.initialDelaySeconds }}
+            timeoutSeconds: 10
+            httpGet:
+              path: /health/ready
+              port: http
+          {{- if .Values.resources.enabled }}
+          resources:
+            {{- toYaml .Values.resources.value | nindent 12 }}
+          {{- end }}
+          {{- if .Values.dbConfig.sslAuth.enabled }}
+          volumeMounts:
+            - name: cert-conf
+              mountPath: /tmp/certs
+              readOnly: true
+          {{- end }}
+      {{- if .Values.dbConfig.sslAuth.enabled }}
+      volumes:
+        - name: cert-conf
+          secret:
+            secretName: {{ .Values.dbConfig.sslAuth.secretName }}
+      {{- end }}
+{{- end -}}
