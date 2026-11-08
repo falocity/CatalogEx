@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { jsLogger } from '@map-colonies/js-logger';
 import { expect } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { drizzle } from 'drizzle-orm/node-postgres';
@@ -91,10 +92,14 @@ export async function withProductTest(run: (context: { requests: ProductsRequest
     await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ');
 
     ({ app } = await buildApp(
-      { logger: false },
+      {},
       {
         config,
         override: [
+          {
+            token: SERVICES.LOGGER,
+            provider: { useValue: await jsLogger({ enabled: false }) },
+          },
           {
             token: SERVICES.DATABASE,
             provider: { useValue: drizzle({ client }) },
