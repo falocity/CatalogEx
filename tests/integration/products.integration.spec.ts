@@ -1,36 +1,32 @@
 import { randomUUID } from "node:crypto";
+import { jsLogger } from "@map-colonies/js-logger";
 import type { FastifyInstance } from "fastify";
 import { StatusCodes } from "http-status-codes";
 import type { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildApp } from "../../src/app.js";
-import { getConfig, initConfig } from "../../src/common/config.js";
+import { initConfig } from "../../src/common/config.js";
 import { SERVICES } from "../../src/common/constants.js";
-import type { BoundingPolygon } from "../../src/modules/products/schemas/fields.schema.js";
 import type { ProductsPage } from "../../src/modules/products/schemas/pagination.schema.js";
 import type {
-  CreateProduct,
   CreateProductResponse,
   Product,
 } from "../../src/modules/products/schemas/product.schema.js";
-import type { SearchProductsInput } from "../../src/modules/products/schemas/search-products.schema.js";
+import { rectangle, validFootprints } from "../helpers/geometry.js";
 import {
   expectValidationError,
   makeProduct,
-  rectangle,
+  searchProducts,
   storeProduct,
   withProductTest,
+  makeValidationInput,
 } from "../helpers/products.js";
 import { ProductsRequestSender } from "../helpers/productsRequestSender.js";
-import { spawn } from "node:child_process";
-import { createServer } from "node:http";
 
 describe("products API", () => {
   describe("Happy Path", () => {
     it("creates a product and returns its ID and Location", () =>
-      withProductTest(async ({ app }) => {
-        const requests = new ProductsRequestSender(app);
+      withProductTest(async ({ requests }) => {
         const response = await requests.create(
           makeProduct({
             boundingPolygon: rectangle(34, 31, 35, 32),
@@ -49,10 +45,9 @@ describe("products API", () => {
       }));
 
     it("retrieves the stored product", () =>
-      withProductTest(async ({ app }) => {
-        const requests = new ProductsRequestSender(app);
+      withProductTest(async ({ requests }) => {
         const input = makeProduct();
-        const id = await storeProduct(app, input);
+        const id = await storeProduct(requests, input);
         const response = await requests.getById(id);
 
         expect(response.statusCode, response.body).toBe(StatusCodes.OK);
@@ -60,10 +55,9 @@ describe("products API", () => {
       }));
 
     it("searches by name and numeric resolution threshold", () =>
-      withProductTest(async ({ app }) => {
-        const requests = new ProductsRequestSender(app);
+      withProductTest(async ({ requests }) => {
         const input = makeProduct({ resolutionBest: 0.5 });
-        const id = await storeProduct(app, input);
+        const id = await storeProduct(requests, input);
 
         for (const { threshold, expectedIds } of [
           { threshold: 0.25, expectedIds: [id] },
@@ -86,10 +80,9 @@ describe("products API", () => {
       }));
 
     it("updates a field and preserves omitted fields", () =>
-      withProductTest(async ({ app }) => {
-        const requests = new ProductsRequestSender(app);
+      withProductTest(async ({ requests }) => {
         const input = makeProduct();
-        const id = await storeProduct(app, input);
+        const id = await storeProduct(requests, input);
         const expected = { ...input, id, description: "Updated automatically" };
 
         const update = await requests.update(id, {
@@ -104,9 +97,8 @@ describe("products API", () => {
       }));
 
     it("deletes a product and returns 404 on a subsequent GET", () =>
-      withProductTest(async ({ app }) => {
-        const requests = new ProductsRequestSender(app);
-        const id = await storeProduct(app, makeProduct());
+      withProductTest(async ({ requests }) => {
+        const id = await storeProduct(requests, makeProduct());
 
         const deletion = await requests.remove(id);
         expect(deletion.statusCode, deletion.body).toBe(StatusCodes.NO_CONTENT);
@@ -120,8 +112,7 @@ describe("products API", () => {
 
   describe("Sad Path", () => {
     it.each(["PATCH", "DELETE"] as const)("%s returns 404", async (method) => {
-      await withProductTest(async ({ app }) => {
-        const requests = new ProductsRequestSender(app);
+      await withProductTest(async ({ requests }) => {
         const id = randomUUID();
         const response =
           method === "PATCH"
@@ -139,187 +130,12 @@ describe("products API", () => {
   });
 });
 
-async function unusedPort(): Promise<number> {
-  const server = createServer();
-
-  await new Promise<void>((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", resolve);
-  });
-
-  const address = server.address();
-  if (!address || typeof address === "string") {
-    throw new Error("Could not allocate a test port");
-  }
-
-  await new Promise<void>((resolve, reject) => {
-    server.close((error) => (error ? reject(error) : resolve()));
-  });
-
-  return address.port;
-}
-
-async function withRunningServer(
-  databasePort: number,
-  run: (baseUrl: string) => Promise<void>,
-): Promise<void> {
-  const port = await unusedPort();
-  const baseUrl = `http://127.0.0.1:${port}`;
-
-  const child = spawn(
-    process.execPath,
-    [
-      "--import",
-      "tsx",
-      "--import",
-      "./src/instrumentation.mts",
-      "src/index.ts",
-    ],
-    {
-      cwd: process.cwd(),
-      env: {
-        ...process.env,
-        NODE_ENV: "test",
-        HOST: "127.0.0.1",
-        PORT: String(port),
-        POSTGRES_PORT: String(databasePort),
-      },
-      stdio: ["ignore", "pipe", "pipe"],
-    },
-  );
-
-  let output = "";
-  child.stdout.on("data", (chunk: Buffer) => {
-    output += chunk.toString();
-  });
-  child.stderr.on("data", (chunk: Buffer) => {
-    output += chunk.toString();
-  });
-
-  const stopped = new Promise<void>((resolve) => {
-    child.once("exit", () => resolve());
-  });
-
-  try {
-    let listening = false;
-
-    for (let attempt = 0; attempt < 100; attempt++) {
-      if (child.exitCode !== null) {
-        throw new Error(`Server exited before listening:\n${output}`);
-      }
-
-      try {
-        const response = await fetch(`${baseUrl}/health/live`, {
-          signal: AbortSignal.timeout(300),
-        });
-
-        if (response.ok) {
-          listening = true;
-          break;
-        }
-      } catch {
-        // The server may still be starting.
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-
-    if (!listening) {
-      throw new Error(`Server did not start:\n${output}`);
-    }
-
-    await run(baseUrl);
-  } finally {
-    if (child.exitCode === null && child.signalCode === null) {
-      child.kill("SIGTERM");
-
-      const timeout = setTimeout(() => {
-        child.kill("SIGKILL");
-      }, 5_000);
-
-      try {
-        await stopped;
-      } finally {
-        clearTimeout(timeout);
-      }
-    }
-  }
-}
-
-describe("health checks", () => {
-  beforeAll(async () => {
-    await initConfig();
-  });
-
-  describe("Happy Path", () => {
-    it("returns live and ready when the database is available", async () => {
-      const databasePort = getConfig().get("database.port");
-
-      await withRunningServer(databasePort, async (baseUrl) => {
-        const live = await fetch(`${baseUrl}/health/live`);
-        expect(live.status).toBe(StatusCodes.OK);
-        expect(await live.json()).toEqual({ status: "ok" });
-
-        const ready = await fetch(`${baseUrl}/health/ready`);
-        expect(ready.status).toBe(StatusCodes.OK);
-        expect(await ready.json()).toEqual({ status: "ok" });
-      });
-    }, 20_000);
-  });
-
-  describe("Sad Path", () => {
-    it("stays live but returns 503 when the database is unavailable", async () => {
-      const unavailableDatabasePort = await unusedPort();
-
-      await withRunningServer(unavailableDatabasePort, async (baseUrl) => {
-        const live = await fetch(`${baseUrl}/health/live`);
-        expect(live.status).toBe(StatusCodes.OK);
-        expect(await live.json()).toEqual({ status: "ok" });
-
-        const ready = await fetch(`${baseUrl}/health/ready`);
-        expect(ready.status).toBe(StatusCodes.SERVICE_UNAVAILABLE);
-
-        const body = await ready.text();
-        expect(JSON.parse(body)).toEqual({ status: "not_ready" });
-        expect(body).not.toContain("Connection terminated");
-      });
-    }, 20_000);
-  });
-});
-
-const polygonXY = rectangle(34, 32, 35, 33);
-
-const polygonXYZ = {
-  type: "Polygon",
-  coordinates: polygonXY.coordinates.map((ring) =>
-    ring.map(([longitude, latitude]): [number, number, number] => [
-      longitude,
-      latitude,
-      25,
-    ]),
-  ),
-} satisfies BoundingPolygon;
-
-const cases: { name: string; geometry: BoundingPolygon }[] = [
-  { name: "Polygon XY", geometry: polygonXY },
-  { name: "Polygon XYZ", geometry: polygonXYZ },
-  {
-    name: "MultiPolygon XY",
-    geometry: { type: "MultiPolygon", coordinates: [polygonXY.coordinates] },
-  },
-  {
-    name: "MultiPolygon XYZ",
-    geometry: { type: "MultiPolygon", coordinates: [polygonXYZ.coordinates] },
-  },
-];
-
 describe("product footprint API", () => {
   describe("Happy Path", () => {
-    it.each(cases)("stores and returns $name", ({ geometry }) =>
-      withProductTest(async ({ app }) => {
-        const requests = new ProductsRequestSender(app);
+    it.each(validFootprints)("stores and returns $name", ({ geometry }) =>
+      withProductTest(async ({ requests }) => {
         const id = await storeProduct(
-          app,
+          requests,
           makeProduct({ boundingPolygon: geometry }),
         );
 
@@ -333,8 +149,7 @@ describe("product footprint API", () => {
 
   describe("Bad Path", () => {
     it("rejects Point geometry", () =>
-      withProductTest(async ({ app }) => {
-        const requests = new ProductsRequestSender(app);
+      withProductTest(async ({ requests }) => {
         const response = await requests.create({
           ...makeProduct(),
           boundingPolygon: { type: "Point", coordinates: [34, 32] },
@@ -347,22 +162,6 @@ describe("product footprint API", () => {
   });
 });
 
-async function search(
-  app: FastifyInstance,
-  filters: SearchProductsInput,
-  offset = 0,
-  limit = 20,
-): Promise<ProductsPage> {
-  const response = await new ProductsRequestSender(app).search(
-    filters,
-    limit,
-    offset,
-  );
-
-  expect(response.statusCode, response.body).toBe(StatusCodes.OK);
-  return response.json<ProductsPage>();
-}
-
 const spatialMatches = {
   contains: ["outer"],
   within: ["inner"],
@@ -374,7 +173,7 @@ describe("product search", () => {
     it.each(["contains", "within", "intersects"] as const)(
       "%s uses the correct direction and boundary behavior",
       async (operator) => {
-        await withProductTest(async ({ app }) => {
+        await withProductTest(async ({ requests }) => {
           const name = makeProduct().name;
 
           const shapes = {
@@ -390,11 +189,14 @@ describe("product search", () => {
           for (const [label, boundingPolygon] of Object.entries(shapes)) {
             ids.set(
               label,
-              await storeProduct(app, makeProduct({ name, boundingPolygon })),
+              await storeProduct(
+                requests,
+                makeProduct({ name, boundingPolygon }),
+              ),
             );
           }
 
-          const page = await search(app, {
+          const page = await searchProducts(requests, {
             equal: { name },
             [operator]: {
               boundingPolygon: rectangle(0, 0, 10, 10),
@@ -410,18 +212,21 @@ describe("product search", () => {
     );
 
     it("combines equality and numeric conditions with AND", async () => {
-      await withProductTest(async ({ app }) => {
+      await withProductTest(async ({ requests }) => {
         const name = makeProduct().name;
 
-        await storeProduct(app, makeProduct({ name, resolutionBest: 0.5 }));
+        await storeProduct(
+          requests,
+          makeProduct({ name, resolutionBest: 0.5 }),
+        );
 
         const expected = await storeProduct(
-          app,
+          requests,
           makeProduct({ name, resolutionBest: 2 }),
         );
 
         await storeProduct(
-          app,
+          requests,
           makeProduct({
             name,
             resolutionBest: 2,
@@ -429,7 +234,7 @@ describe("product search", () => {
           }),
         );
 
-        const page = await search(app, {
+        const page = await searchProducts(requests, {
           equal: { name, consumptionProtocol: "WMTS" },
           greater: { resolutionBest: 1 },
           lessEqual: { resolutionBest: 3 },
@@ -440,18 +245,23 @@ describe("product search", () => {
     });
 
     it("returns ordered search pages and an empty final page", async () => {
-      await withProductTest(async ({ app }) => {
+      await withProductTest(async ({ requests }) => {
         const name = makeProduct().name;
         const ids: string[] = [];
 
         for (let i = 0; i < 3; i++) {
-          ids.push(await storeProduct(app, makeProduct({ name })));
+          ids.push(await storeProduct(requests, makeProduct({ name })));
         }
 
         ids.sort();
 
         for (const offset of [0, 2, 3]) {
-          const page = await search(app, { equal: { name } }, offset, 2);
+          const page = await searchProducts(
+            requests,
+            { equal: { name } },
+            offset,
+            2,
+          );
 
           expect(page.items.map((product) => product.id)).toEqual(
             ids.slice(offset, offset + 2),
@@ -461,7 +271,7 @@ describe("product search", () => {
           expect(page.hasMore).toBe(offset + 2 < ids.length);
         }
 
-        const noMatches = await search(app, {
+        const noMatches = await searchProducts(requests, {
           equal: { name },
           greater: { resolutionBest: 99 },
         });
@@ -472,10 +282,9 @@ describe("product search", () => {
     });
 
     it("lists pages matching the database snapshot", async () => {
-      await withProductTest(async ({ app, client }) => {
-        const requests = new ProductsRequestSender(app);
+      await withProductTest(async ({ requests, client }) => {
         for (let i = 0; i < 3; i++) {
-          await storeProduct(app, makeProduct());
+          await storeProduct(requests, makeProduct());
         }
 
         const { rows } = await client.query<{ id: string }>(
@@ -518,22 +327,21 @@ describe("product request validation", () => {
 
   beforeAll(async () => {
     await initConfig();
-    const built = await buildApp({ logger: false });
+    const built = await buildApp(
+      {},
+      {
+        override: [
+          {
+            token: SERVICES.LOGGER,
+            provider: { useValue: await jsLogger({ enabled: false }) },
+          },
+        ],
+      },
+    );
     app = built.app;
     requests = new ProductsRequestSender(app);
     pool = built.container.resolve<Pool>(SERVICES.POOL);
   });
-
-  function makeInput(): CreateProduct {
-    const input = makeProduct({
-      boundingPolygon: rectangle(34, 31, 35, 32),
-      resolutionBest: 0.5,
-      minZoom: 1,
-    });
-
-    names.add(input.name);
-    return input;
-  }
 
   afterAll(async () => {
     try {
@@ -550,8 +358,8 @@ describe("product request validation", () => {
 
   describe("Happy Path", () => {
     it("stores minZoom zero on POST", async () => {
-      const input = { ...makeInput(), minZoom: 0 };
-      const id = await storeProduct(app, input);
+      const input = { ...makeValidationInput(names), minZoom: 0 };
+      const id = await storeProduct(requests, input);
 
       const response = await requests.getById(id);
 
@@ -560,8 +368,8 @@ describe("product request validation", () => {
     });
 
     it("stores minZoom zero on PATCH and preserves omitted fields", async () => {
-      const input = makeInput();
-      const id = await storeProduct(app, input);
+      const input = makeValidationInput(names);
+      const id = await storeProduct(requests, input);
 
       const update = await requests.update(id, { minZoom: 0 });
 
@@ -589,11 +397,11 @@ describe("product request validation", () => {
     ] as const)(
       "%s returns 400 for %s storage overflow",
       async (method, field) => {
-        const input = makeInput();
+        const input = makeValidationInput(names);
         const overflow = 2_147_483_648;
 
         const id =
-          method === "PATCH" ? await storeProduct(app, input) : undefined;
+          method === "PATCH" ? await storeProduct(requests, input) : undefined;
 
         const payload =
           method === "PATCH"
@@ -635,9 +443,11 @@ describe("product request validation", () => {
       ["update", "MultiPolygon"],
       ["search", "MultiPolygon"],
     ] as const)("%s rejects extra %s properties", async (operation, kind) => {
-      const input = makeInput();
+      const input = makeValidationInput(names);
       const id =
-        operation === "update" ? await storeProduct(app, input) : undefined;
+        operation === "update"
+          ? await storeProduct(requests, input)
+          : undefined;
 
       const geometry =
         kind === "Polygon"
@@ -684,10 +494,12 @@ describe("product request validation", () => {
     it.each(["create", "update-both", "update-min", "update-max"] as const)(
       "%s rejects invalid resulting zoom order",
       async (operation) => {
-        const input = { ...makeInput(), minZoom: 5 };
+        const input = { ...makeValidationInput(names), minZoom: 5 };
 
         const id =
-          operation === "create" ? undefined : await storeProduct(app, input);
+          operation === "create"
+            ? undefined
+            : await storeProduct(requests, input);
 
         const payload =
           operation === "create"

@@ -8,32 +8,14 @@ import { buildApp } from "../../src/app.js";
 import { getConfig, initConfig } from "../../src/common/config.js";
 import { SERVICES } from "../../src/common/constants.js";
 import { createPool } from "../../src/db/client.js";
-import type { BoundingPolygon } from "../../src/modules/products/schemas/fields.schema.js";
-import { ProductsRequestSender } from "./productsRequestSender.js";
+import type { ProductsPage } from "../../src/modules/products/schemas/pagination.schema.js";
 import type {
   CreateProduct,
   CreateProductResponse,
 } from "../../src/modules/products/schemas/product.schema.js";
-
-export function rectangle(
-  left: number,
-  bottom: number,
-  right: number,
-  top: number,
-): Extract<BoundingPolygon, { type: "Polygon" }> {
-  return {
-    type: "Polygon",
-    coordinates: [
-      [
-        [left, bottom],
-        [right, bottom],
-        [right, top],
-        [left, top],
-        [left, bottom],
-      ],
-    ],
-  };
-}
+import type { SearchProductsInput } from "../../src/modules/products/schemas/search-products.schema.js";
+import { rectangle } from "./geometry.js";
+import { ProductsRequestSender } from "./productsRequestSender.js";
 
 export function makeProduct(
   overrides: Partial<CreateProduct> = {},
@@ -51,11 +33,22 @@ export function makeProduct(
   };
 }
 
+export function makeValidationInput(names: Set<string>): CreateProduct {
+  const input = makeProduct({
+    boundingPolygon: rectangle(34, 31, 35, 32),
+    resolutionBest: 0.5,
+    minZoom: 1,
+  });
+
+  names.add(input.name);
+  return input;
+}
+
 export async function storeProduct(
-  app: FastifyInstance,
+  requests: ProductsRequestSender,
   input: CreateProduct,
 ): Promise<string> {
-  const response = await new ProductsRequestSender(app).create(input);
+  const response = await requests.create(input);
   expect(response.statusCode, response.body).toBe(StatusCodes.CREATED);
 
   const { id } = response.json<CreateProductResponse>();
@@ -64,6 +57,23 @@ export async function storeProduct(
 
   return id;
 }
+
+export async function searchProducts(
+  requests: ProductsRequestSender,
+  filters: SearchProductsInput,
+  offset = 0,
+  limit = 20,
+): Promise<ProductsPage> {
+  const response = await requests.search(
+    filters,
+    limit,
+    offset,
+  );
+
+  expect(response.statusCode, response.body).toBe(StatusCodes.OK);
+  return response.json<ProductsPage>();
+}
+
 export function expectValidationError(response: {
   statusCode: number;
   body: string;
@@ -81,7 +91,7 @@ export function expectValidationError(response: {
 }
 
 export async function withProductTest(
-  run: (context: { app: FastifyInstance; client: PoolClient }) => Promise<void>,
+  run: (context: { requests: ProductsRequestSender; client: PoolClient }) => Promise<void>,
 ): Promise<void> {
   await initConfig();
   const config = getConfig();
@@ -107,7 +117,7 @@ export async function withProductTest(
       },
     ));
 
-    await run({ app, client });
+    await run({ requests: new ProductsRequestSender(app), client });
   } finally {
     try {
       if (client) await client.query("ROLLBACK");
