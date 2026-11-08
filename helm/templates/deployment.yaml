@@ -64,13 +64,13 @@ spec:
             initialDelaySeconds: {{ .Values.initialDelaySeconds }}
             timeoutSeconds: 2
             httpGet:
-              path: /health/live
+              path: /liveness
               port: http
           readinessProbe:
             initialDelaySeconds: {{ .Values.initialDelaySeconds }}
             timeoutSeconds: 10
             httpGet:
-              path: /health/ready
+              path: /readiness
               port: http
           {{- if .Values.resources.enabled }}
           resources:
