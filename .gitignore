@@ -116,3 +116,4 @@ config/local*.json
 /compose.yaml
 
 /.env.example
+values.yaml
