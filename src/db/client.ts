@@ -1,4 +1,4 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
+import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import type { ConfigType } from '../common/config.js';
 
@@ -17,7 +17,7 @@ export function createPool(config: ConfigType): Pool {
   });
 }
 
-export function createDatabase(pool: Pool) {
+export function createDatabase(pool: Pool): Database {
   return drizzle({ client: pool });
 }
 
@@ -33,5 +33,5 @@ export function createDatabaseReadiness(pool: Pool, config: ConfigType) {
   };
 }
 
-export type Database = ReturnType<typeof createDatabase>;
+export type Database = NodePgDatabase & { $client: Pool };
 export type DatabaseReadiness = ReturnType<typeof createDatabaseReadiness>;

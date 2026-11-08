@@ -1,13 +1,17 @@
 import type { CleanupRegistry } from '@map-colonies/cleanup-registry';
 import type { Logger } from '@map-colonies/js-logger';
-import type { FastifyServerOptions } from 'fastify';
+import type { FastifyInstance, FastifyServerOptions } from 'fastify';
 import type { Pool } from 'pg';
+import type { DependencyContainer } from 'tsyringe';
 
 import { SERVICES } from './common/constants.js';
 import { registerExternalValues, type RegisterOptions } from './containerConfig.js';
 import { ServerBuilder } from './serverBuilder.js';
 
-export async function buildApp(options: FastifyServerOptions = {}, registerOptions: RegisterOptions = {}) {
+export async function buildApp(
+  options: FastifyServerOptions = {},
+  registerOptions: RegisterOptions = {}
+): Promise<{ app: FastifyInstance; container: DependencyContainer }> {
   const container = await registerExternalValues(registerOptions);
   const registry = container.resolve<CleanupRegistry>(SERVICES.CLEANUP_REGISTRY);
 

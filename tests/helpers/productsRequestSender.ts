@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 
 const productsPath = '/products';
 
@@ -9,7 +9,7 @@ function productPath(id: string): string {
 export class ProductsRequestSender {
   public constructor(private readonly app: FastifyInstance) {}
 
-  public async create(payload: object | string, headers?: Record<string, string>) {
+  public async create(payload: object | string, headers?: Record<string, string>): Promise<LightMyRequestResponse> {
     return this.app.inject({
       method: 'POST',
       url: productsPath,
@@ -18,18 +18,18 @@ export class ProductsRequestSender {
     });
   }
 
-  public async getById(id: string) {
+  public async getById(id: string): Promise<LightMyRequestResponse> {
     return this.app.inject({ method: 'GET', url: productPath(id) });
   }
 
-  public async list(limit: number, offset: number) {
+  public async list(limit: number, offset: number): Promise<LightMyRequestResponse> {
     return this.app.inject({
       method: 'GET',
       url: `${productsPath}?limit=${limit}&offset=${offset}`,
     });
   }
 
-  public async update(id: string, payload: object | string, headers?: Record<string, string>) {
+  public async update(id: string, payload: object | string, headers?: Record<string, string>): Promise<LightMyRequestResponse> {
     return this.app.inject({
       method: 'PATCH',
       url: productPath(id),
@@ -38,11 +38,11 @@ export class ProductsRequestSender {
     });
   }
 
-  public async remove(id: string) {
+  public async remove(id: string): Promise<LightMyRequestResponse> {
     return this.app.inject({ method: 'DELETE', url: productPath(id) });
   }
 
-  public async search(payload: object, limit: number, offset: number) {
+  public async search(payload: object, limit: number, offset: number): Promise<LightMyRequestResponse> {
     return this.app.inject({
       method: 'POST',
       url: `${productsPath}/search?limit=${limit}&offset=${offset}`,

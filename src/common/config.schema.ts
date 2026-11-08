@@ -4,7 +4,7 @@ import type { typeSymbol } from '@map-colonies/schemas/build/schemas/symbol.js';
 
 const MAX_TCP_PORT = 65535;
 
-function stringSetting(environmentVariable: string) {
+function stringSetting(environmentVariable: string): typebox.TString {
   return typebox.String({
     minLength: 1,
     pattern: '\\S',
@@ -12,7 +12,7 @@ function stringSetting(environmentVariable: string) {
   });
 }
 
-function integerSetting(environmentVariable: string, minimum: number, maximum?: number) {
+function integerSetting(environmentVariable: string, minimum: number, maximum?: number): typebox.TInteger {
   return typebox.Integer({
     minimum,
     ...(maximum === undefined ? {} : { maximum }),

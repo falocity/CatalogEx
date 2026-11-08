@@ -6,7 +6,8 @@ import { ProductNotFoundError, ProductValidationError } from './products.errors.
 import { ProductsRepository } from './products.repository.js';
 import { validateBoundingPolygon, validateProductFields } from './product.validation.js';
 import type { BoundingPolygon } from './schemas/fields.schema.js';
-import type { CreateProduct } from './schemas/product.schema.js';
+import type { ProductsPage } from './schemas/pagination.schema.js';
+import type { CreateProduct, CreateProductResponse, Product } from './schemas/product.schema.js';
 import type { SearchProductsInput } from './schemas/search-products.schema.js';
 import type { UpdateProduct } from './schemas/update-product.schema.js';
 
@@ -21,7 +22,7 @@ export class ProductsService {
     private readonly geometryValidator: GeometryValidator
   ) {}
 
-  public async createProduct(input: CreateProduct) {
+  public async createProduct(input: CreateProduct): Promise<CreateProductResponse> {
     validateProductFields(input);
 
     const product = await this.repository.createProduct(input);
@@ -30,7 +31,7 @@ export class ProductsService {
     return product;
   }
 
-  public async getProductById(id: string) {
+  public async getProductById(id: string): Promise<Product> {
     const product = await this.repository.getProductById(id);
 
     if (!product) {
@@ -40,11 +41,11 @@ export class ProductsService {
     return product;
   }
 
-  public async listProducts(limit: number, offset: number) {
+  public async listProducts(limit: number, offset: number): Promise<ProductsPage> {
     return this.repository.listProducts(limit, offset);
   }
 
-  public async updateProduct(id: string, input: UpdateProduct) {
+  public async updateProduct(id: string, input: UpdateProduct): Promise<Product> {
     validateProductFields(input);
 
     const product = await this.repository.updateProduct(id, input);
@@ -57,7 +58,7 @@ export class ProductsService {
     return product;
   }
 
-  public async deleteProduct(id: string) {
+  public async deleteProduct(id: string): Promise<void> {
     const deleted = await this.repository.deleteProduct(id);
 
     if (!deleted) {
@@ -67,7 +68,7 @@ export class ProductsService {
     this.logger.info({ productId: id }, 'Product deleted');
   }
 
-  public async searchProducts(input: SearchProductsInput, limit: number, offset: number) {
+  public async searchProducts(input: SearchProductsInput, limit: number, offset: number): Promise<ProductsPage> {
     const geometries: BoundingPolygon[] = [];
 
     for (const operands of [input.contains, input.within, input.intersects]) {

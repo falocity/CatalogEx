@@ -1,5 +1,5 @@
 import fastify from 'fastify';
-import type { FastifyBaseLogger, FastifyServerOptions } from 'fastify';
+import type { FastifyBaseLogger, FastifyInstance, FastifyServerOptions } from 'fastify';
 import { StatusCodes } from 'http-status-codes';
 import type { Pool } from 'pg';
 import { inject, injectable } from 'tsyringe';
@@ -20,7 +20,7 @@ export class ServerBuilder {
     private readonly controller: ProductsController
   ) {}
 
-  public build(options: FastifyServerOptions = {}) {
+  public build(options: FastifyServerOptions = {}): FastifyInstance {
     const app = fastify({
       loggerInstance: this.logger,
       ...options,
