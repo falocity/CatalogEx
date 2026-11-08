@@ -1,0 +1,8 @@
+extends:
+  - recommended
+rules:
+  boolean-parameter-prefixes:
+    severity: error
+    prefixes: ['should', 'is', 'has']
+  no-unused-components: error
+  no-empty-servers: off

@@ -1,0 +1,42 @@
+name: Contract, images, and Helm
+
+on: pull_request
+
+permissions:
+  contents: read
+
+jobs:
+  openapi-lint:
+    name: Lint OpenAPI
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - run: npx --yes @redocly/cli@2.76.0 lint openapi.yaml --format=github-actions
+
+  build-images:
+    name: Build ${{ matrix.dockerfile }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        dockerfile: [Dockerfile, migrations.Dockerfile]
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker build --file "${{ matrix.dockerfile }}" .
+
+  helm-lint:
+    name: Check Helm chart
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Lint and render the chart when present
+        run: |
+          if [[ ! -f helm/Chart.yaml ]]; then
+            echo "No Helm chart in this checkout."
+            exit 0
+          fi
+          helm lint ./helm
+          helm template catalogex ./helm > /dev/null
