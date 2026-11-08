@@ -6,7 +6,7 @@ CatalogEx stores geospatial product metadata and searches product footprints. It
 
 The HTTP API uses Fastify and TypeBox for routes and request validation. Product controllers handle HTTP responses, services apply product rules, and repositories use Drizzle to query PostgreSQL. PostGIS stores and searches Polygon and MultiPolygon footprints. `openapi.yaml` defines the API contract.
 
-Configuration comes from `config/default.json` with environment overrides. The application container creates and shares dependencies within one application instance. `/health/live` checks that the HTTP service responds; `/health/ready` checks the database.
+Configuration comes from `config/default.json` with environment overrides. The application container creates and shares dependencies within one application instance. `/health/liveness` checks that the HTTP service responds; `/health/readiness` checks the database.
 
 ## Requirements
 
@@ -57,8 +57,8 @@ Configuration comes from `config/default.json` with environment overrides. The a
 5. Check the service and run the project checks:
 
    ```bash
-   curl -i http://127.0.0.1:8080/health/live
-   curl -i http://127.0.0.1:8080/health/ready
+   curl -i http://127.0.0.1:8080/health/liveness
+   curl -i http://127.0.0.1:8080/health/readiness
    npm run typecheck
    npm run build
    npm test

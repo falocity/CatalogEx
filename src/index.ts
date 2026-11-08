@@ -32,8 +32,8 @@ try {
 
   createTerminus(app.server, {
     healthChecks: {
-      "/health/live": async (): Promise<void> => {},
-      "/health/ready": async (): Promise<void> => {
+      "/health/liveness": async (): Promise<void> => {},
+      "/health/readiness": async (): Promise<void> => {
         try {
           await checkDatabase();
         } catch (error) {
