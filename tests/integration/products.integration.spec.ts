@@ -26,7 +26,7 @@ describe('products API', () => {
         );
 
         assert.strictEqual(response.statusCode, StatusCodes.CREATED, response.body);
-        const created = response.json<CreateProductResponse>();
+        const created = response.json<CreateProductResponse>(); 
         expect(created.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
         expect(created).toEqual({ id: created.id });
         expect(response.headers.location).toBe(`/products/${created.id}`);
