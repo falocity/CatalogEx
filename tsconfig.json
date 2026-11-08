@@ -8,7 +8,7 @@
     "module": "NodeNext",
     "target": "ES2022",
     "lib": ["ES2022"],
-    "types": ["node"],
+    "types": ["node", "lodash"],
 
     "sourceMap": true,
     "noEmitOnError": true,
@@ -23,12 +23,5 @@
     "moduleDetection": "force",
     "skipLibCheck": true
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.mts",
-    "tests/**/*.ts",
-    "tests/**/*.mts",
-    "drizzle.config.ts",
-    "vitest.config.mts"
-  ]
+  "include": ["src/**/*.ts", "src/**/*.mts", "tests/**/*.ts", "tests/**/*.mts", "drizzle.config.ts", "vitest.config.mts"]
 }

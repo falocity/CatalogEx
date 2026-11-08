@@ -1,74 +1,69 @@
-import Type from "typebox";
-import schemas from "@map-colonies/schemas";
-import type { commonBoilerplateV3Type } from "@map-colonies/schemas";
-import type { typeSymbol } from "@map-colonies/schemas/build/schemas/symbol.js";
+import typebox from 'typebox';
+import { commonBoilerplateV3, type commonBoilerplateV3Type } from '@map-colonies/schemas';
+import type { typeSymbol } from '@map-colonies/schemas/build/schemas/symbol.js';
 
-function stringSetting(environmentVariable: string) {
-  return Type.String({
+const MAX_TCP_PORT = 65535;
+
+function stringSetting(environmentVariable: string): typebox.TString {
+  return typebox.String({
     minLength: 1,
-    pattern: "\\S",
-    "x-env-value": environmentVariable,
+    pattern: '\\S',
+    'x-env-value': environmentVariable,
   });
 }
 
-function integerSetting(
-  environmentVariable: string,
-  minimum: number,
-  maximum?: number,
-) {
-  return Type.Integer({
+function integerSetting(environmentVariable: string, minimum: number, maximum?: number): typebox.TInteger {
+  return typebox.Integer({
     minimum,
     ...(maximum === undefined ? {} : { maximum }),
-    "x-env-value": environmentVariable,
-    "x-env-format": "json",
+    'x-env-value': environmentVariable,
+    'x-env-format': 'json',
   });
 }
 
-const schema = Type.Object(
+const schema = typebox.Object(
   {
-    server: Type.Object(
+    server: typebox.Object(
       {
-        host: stringSetting("HOST"),
-        port: integerSetting("PORT", 1, 65535),
-        shutdownTimeoutMs: integerSetting("SHUTDOWN_TIMEOUT_MS", 1),
+        host: stringSetting('HOST'),
+        port: integerSetting('PORT', 1, MAX_TCP_PORT),
+        shutdownTimeoutMs: integerSetting('SHUTDOWN_TIMEOUT_MS', 1),
       },
-      { additionalProperties: false },
+      { additionalProperties: false }
     ),
 
-    telemetry: Type.Unsafe<commonBoilerplateV3Type["telemetry"]>(
-      schemas.commonBoilerplateV3.properties.telemetry,
+    telemetry: typebox.Unsafe<commonBoilerplateV3Type['telemetry']>(commonBoilerplateV3.properties.telemetry),
+
+    database: typebox.Object(
+      {
+        host: stringSetting('POSTGRES_HOST'),
+        port: integerSetting('POSTGRES_PORT', 1, MAX_TCP_PORT),
+        database: stringSetting('POSTGRES_DB'),
+        user: stringSetting('POSTGRES_USER'),
+        password: stringSetting('POSTGRES_PASSWORD'),
+        maxConnections: integerSetting('DB_POOL_MAX', 1),
+        idleTimeoutMs: integerSetting('DB_IDLE_TIMEOUT_MS', 0),
+        connectionTimeoutMs: integerSetting('DB_CONNECTION_TIMEOUT_MS', 1),
+      },
+      { additionalProperties: false }
     ),
 
-    database: Type.Object(
+    readiness: typebox.Object(
       {
-        host: stringSetting("POSTGRES_HOST"),
-        port: integerSetting("POSTGRES_PORT", 1, 65535),
-        database: stringSetting("POSTGRES_DB"),
-        user: stringSetting("POSTGRES_USER"),
-        password: stringSetting("POSTGRES_PASSWORD"),
-        maxConnections: integerSetting("DB_POOL_MAX", 1),
-        idleTimeoutMs: integerSetting("DB_IDLE_TIMEOUT_MS", 0),
-        connectionTimeoutMs: integerSetting("DB_CONNECTION_TIMEOUT_MS", 1),
+        queryTimeoutMs: integerSetting('READINESS_QUERY_TIMEOUT_MS', 1),
       },
-      { additionalProperties: false },
-    ),
-
-    readiness: Type.Object(
-      {
-        queryTimeoutMs: integerSetting("READINESS_QUERY_TIMEOUT_MS", 1),
-      },
-      { additionalProperties: false },
+      { additionalProperties: false }
     ),
   },
   {
-    $id: "urn:catalogex:config",
+    $id: 'urn:catalogex:config',
     additionalProperties: false,
-  },
+  }
 );
 
-export type AppConfig = Type.Static<typeof schema>;
+export type AppConfig = typebox.Static<typeof schema>;
 
-export const AppConfigSchema = schema as typeof schema & {
+export const appConfigSchema = schema as typeof schema & {
   readonly $id: string;
   readonly [typeSymbol]: AppConfig;
 };

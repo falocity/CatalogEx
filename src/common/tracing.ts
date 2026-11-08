@@ -1,14 +1,12 @@
-import { Tracing } from "@map-colonies/tracing";
+import { Tracing } from '@map-colonies/tracing';
 
 let tracing: Tracing | undefined;
 
-export function tracingFactory(
-  options: ConstructorParameters<typeof Tracing>[0],
-): Tracing {
+export function tracingFactory(options: ConstructorParameters<typeof Tracing>[0]): Tracing {
   tracing = new Tracing({
     ...options,
     autoInstrumentationsConfigMap: {
-      "@opentelemetry/instrumentation-fs": {
+      '@opentelemetry/instrumentation-fs': {
         requireParentSpan: true,
       },
     },
@@ -19,7 +17,7 @@ export function tracingFactory(
 
 export function getTracing(): Tracing {
   if (!tracing) {
-    throw new Error("Tracing has not been initialized");
+    throw new Error('Tracing has not been initialized');
   }
 
   return tracing;

@@ -1,101 +1,111 @@
-import Type from "typebox";
+import typebox from 'typebox';
 
-export const ProductIdSchema = Type.String({
-  format: "uuid",
+const productIdSchema = typebox.String({
+  format: 'uuid',
 });
 
-export const ProductNameSchema = Type.String({
+const productNameSchema = typebox.String({
   minLength: 1,
   maxLength: 48,
 });
 
-export const ProductDescriptionSchema = Type.String({
+const productDescriptionSchema = typebox.String({
   minLength: 1,
 });
 
-const LongitudeSchema = Type.Number({
+const longitudeSchema = typebox.Number({
   minimum: -180,
   maximum: 180,
 });
 
-const LatitudeSchema = Type.Number({
+const latitudeSchema = typebox.Number({
   minimum: -90,
   maximum: 90,
 });
 
-const AltitudeSchema = Type.Number();
+const altitudeSchema = typebox.Number();
 
-const PositionSchema = Type.Union([
-  Type.Tuple([LongitudeSchema, LatitudeSchema]),
-  Type.Tuple([LongitudeSchema, LatitudeSchema, AltitudeSchema]),
+const positionSchema = typebox.Union([
+  typebox.Tuple([longitudeSchema, latitudeSchema]),
+  typebox.Tuple([longitudeSchema, latitudeSchema, altitudeSchema]),
 ]);
 
-const LinearRingSchema = Type.Array(PositionSchema, {
+const linearRingSchema = typebox.Array(positionSchema, {
   minItems: 4,
 });
 
-const PolygonCoordinatesSchema = Type.Array(LinearRingSchema, {
+const polygonCoordinatesSchema = typebox.Array(linearRingSchema, {
   minItems: 1,
 });
 
-const PolygonSchema = Type.Object(
+const polygonSchema = typebox.Object(
   {
-    type: Type.Literal("Polygon"),
-    coordinates: PolygonCoordinatesSchema,
+    type: typebox.Literal('Polygon'),
+    coordinates: polygonCoordinatesSchema,
   },
-  { additionalProperties: false },
+  { additionalProperties: false }
 );
 
-const MultiPolygonSchema = Type.Object(
+const multiPolygonSchema = typebox.Object(
   {
-    type: Type.Literal("MultiPolygon"),
-    coordinates: Type.Array(PolygonCoordinatesSchema, {
+    type: typebox.Literal('MultiPolygon'),
+    coordinates: typebox.Array(polygonCoordinatesSchema, {
       minItems: 1,
     }),
   },
-  { additionalProperties: false },
+  { additionalProperties: false }
 );
 
-export const BoundingPolygonSchema = Type.Union(
-  [PolygonSchema, MultiPolygonSchema],
-  {
-    description:
-      "GeoJSON Polygon or MultiPolygon using WGS84 longitude and latitude, with optional ellipsoidal height in metres.",
-  },
-);
-
-export type BoundingPolygon = Type.Static<typeof BoundingPolygonSchema>;
-
-export const ConsumptionLinkSchema = Type.String({
-  format: "uri",
+const boundingPolygonSchema = typebox.Union([polygonSchema, multiPolygonSchema], {
+  description: 'GeoJSON Polygon or MultiPolygon using WGS84 longitude and latitude, with optional ellipsoidal height in metres.',
 });
 
-export const ProductTypeSchema = Type.Union([
-  Type.Literal("raster"),
-  Type.Literal("rasterized vector"),
-  Type.Literal("3d tiles"),
-  Type.Literal("QMesh"),
+type BoundingPolygon = typebox.Static<typeof boundingPolygonSchema>;
+
+const consumptionLinkSchema = typebox.String({
+  format: 'uri',
+});
+
+const productTypeSchema = typebox.Union([
+  typebox.Literal('raster'),
+  typebox.Literal('rasterized vector'),
+  typebox.Literal('3d tiles'),
+  typebox.Literal('QMesh'),
 ]);
 
-export type ProductType = Type.Static<typeof ProductTypeSchema>;
+type ProductType = typebox.Static<typeof productTypeSchema>;
 
-export const ConsumptionProtocolSchema = Type.Union([
-  Type.Literal("WMS"),
-  Type.Literal("WMTS"),
-  Type.Literal("XYZ"),
-  Type.Literal("3D Tiles"),
+const consumptionProtocolSchema = typebox.Union([
+  typebox.Literal('WMS'),
+  typebox.Literal('WMTS'),
+  typebox.Literal('XYZ'),
+  typebox.Literal('3D Tiles'),
 ]);
 
-export type ConsumptionProtocol = Type.Static<typeof ConsumptionProtocolSchema>;
+type ConsumptionProtocol = typebox.Static<typeof consumptionProtocolSchema>;
 
-export const ResolutionBestSchema = Type.Number({
+const resolutionBestSchema = typebox.Number({
   minimum: 0,
 });
 
-export const MinZoom = Type.Integer({
+const minZoom = typebox.Integer({
   minimum: 0,
 });
 
-export const MaxZoom = Type.Integer({
+const maxZoom = typebox.Integer({
   exclusiveMinimum: 0,
 });
+
+export {
+  productIdSchema,
+  productNameSchema,
+  productDescriptionSchema,
+  boundingPolygonSchema,
+  consumptionLinkSchema,
+  productTypeSchema,
+  consumptionProtocolSchema,
+  resolutionBestSchema,
+  minZoom,
+  maxZoom,
+};
+export type { BoundingPolygon, ProductType, ConsumptionProtocol };

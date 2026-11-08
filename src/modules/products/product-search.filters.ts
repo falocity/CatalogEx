@@ -1,21 +1,14 @@
-import { and, eq, gt, gte, lt, lte, sql, type SQL } from "drizzle-orm";
-import { products } from "../../db/schema.js";
-import { geometryToSql } from "./geometry.utils.js";
-import {
-  EQUALITY_FILTER_FIELDS,
-  NUMERIC_FILTER_FIELDS,
-} from "./schemas/filter-operators.schema.js";
-import type { SearchProductsInput } from "./schemas/search-products.schema.js";
+import { and, eq, gt, gte, lt, lte, sql, type SQL } from 'drizzle-orm';
+import { products } from '../../db/schema.js';
+import { geometryToSql } from './geometry.utils.js';
+import { EQUALITY_FILTER_FIELDS, NUMERIC_FILTER_FIELDS } from './schemas/filter-operators.schema.js';
+import type { SearchProductsInput } from './schemas/search-products.schema.js';
 
 const numericFields = new Set<string>(NUMERIC_FILTER_FIELDS);
 
-const textEqualityFields = EQUALITY_FILTER_FIELDS.filter(
-  (field) => !numericFields.has(field),
-);
+const textEqualityFields = EQUALITY_FILTER_FIELDS.filter((field) => !numericFields.has(field));
 
-export function buildProductSearchConditions(
-  input: SearchProductsInput,
-): SQL | undefined {
+export function buildProductSearchConditions(input: SearchProductsInput): SQL | undefined {
   const conditions: SQL[] = [];
 
   for (const field of textEqualityFields) {
@@ -39,9 +32,7 @@ export function buildProductSearchConditions(
       const value = operands?.[field];
 
       if (value !== undefined) {
-        conditions.push(
-          compare(products[field], sql`${value}::double precision`),
-        );
+        conditions.push(compare(products[field], sql`${value}::double precision`));
       }
     }
   }
@@ -60,7 +51,7 @@ export function buildProductSearchConditions(
         sql`${predicate}(
           ${products.boundingPolygon},
           ${geometryToSql(geometry)}
-        )`,
+        )`
       );
     }
   }

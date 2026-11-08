@@ -1,48 +1,46 @@
-import Type from "typebox";
-import { ProductSchema } from "./product.schema.js";
+import typebox from 'typebox';
+import { productSchema } from './product.schema.js';
 
-const NumericFieldsSchema = Type.Object({
-  resolutionBest: Type.Number(),
-  minZoom: Type.Integer(),
-  maxZoom: Type.Integer(),
+const numericFieldsSchema = typebox.Object({
+  resolutionBest: typebox.Number(),
+  minZoom: typebox.Integer(),
+  maxZoom: typebox.Integer(),
 });
 
-const EqualityFieldsSchema = Type.Object({
-  ...NumericFieldsSchema.properties,
-  id: ProductSchema.properties.id,
-  name: ProductSchema.properties.name,
-  description: ProductSchema.properties.description,
-  consumptionLink: ProductSchema.properties.consumptionLink,
-  productType: ProductSchema.properties.productType,
-  consumptionProtocol: ProductSchema.properties.consumptionProtocol,
+const equalityFieldsSchema = typebox.Object({
+  ...numericFieldsSchema.properties,
+  id: productSchema.properties.id,
+  name: productSchema.properties.name,
+  description: productSchema.properties.description,
+  consumptionLink: productSchema.properties.consumptionLink,
+  productType: productSchema.properties.productType,
+  consumptionProtocol: productSchema.properties.consumptionProtocol,
 });
 
-const SpatialFieldsSchema = Type.Object({
-  boundingPolygon: ProductSchema.properties.boundingPolygon,
+const spatialFieldsSchema = typebox.Object({
+  boundingPolygon: productSchema.properties.boundingPolygon,
 });
 
-export const NumericOperandsSchema = Type.Partial(NumericFieldsSchema, {
+const numericOperandsSchema = typebox.Partial(numericFieldsSchema, {
   minProperties: 1,
   additionalProperties: false,
 });
 
-export const EqualityOperandsSchema = Type.Partial(EqualityFieldsSchema, {
+const equalityOperandsSchema = typebox.Partial(equalityFieldsSchema, {
   minProperties: 1,
   additionalProperties: false,
 });
 
-export const SpatialOperandsSchema = Type.Partial(SpatialFieldsSchema, {
+const spatialOperandsSchema = typebox.Partial(spatialFieldsSchema, {
   minProperties: 1,
   additionalProperties: false,
 });
 
-type NumericField = keyof typeof NumericFieldsSchema.properties;
-type EqualityField = keyof typeof EqualityFieldsSchema.properties;
+type NumericField = keyof typeof numericFieldsSchema.properties;
+type EqualityField = keyof typeof equalityFieldsSchema.properties;
 
-export const NUMERIC_FILTER_FIELDS = Object.keys(
-  NumericFieldsSchema.properties,
-) as NumericField[];
+const NUMERIC_FILTER_FIELDS = Object.keys(numericFieldsSchema.properties) as NumericField[];
 
-export const EQUALITY_FILTER_FIELDS = Object.keys(
-  EqualityFieldsSchema.properties,
-) as EqualityField[];
+const EQUALITY_FILTER_FIELDS = Object.keys(equalityFieldsSchema.properties) as EqualityField[];
+
+export { numericOperandsSchema, equalityOperandsSchema, spatialOperandsSchema, NUMERIC_FILTER_FIELDS, EQUALITY_FILTER_FIELDS };
