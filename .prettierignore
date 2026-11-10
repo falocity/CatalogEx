@@ -5,3 +5,5 @@ reports
 package-lock.json
 *.html
 drizzle/meta/
+# Helm renders Go templates before they become YAML.
+/helm/templates/

@@ -1,0 +1,69 @@
+global:
+  cloudProvider: {}
+  tracing: {}
+  metrics: {}
+  environment: {}
+
+enabled: true
+environment: development
+replicaCount: 1
+initialDelaySeconds: 10
+
+annotations: {}
+podAnnotations: {}
+
+cloudProvider:
+  dockerRegistryUrl: registry.example.invalid
+  flavor: openshift
+
+image:
+  repository: catalogex
+  tag: '1.0.0'
+  pullPolicy: Always
+
+env:
+  port: 8080
+  targetPort: 8080
+  protocol: TCP
+  logLevel: info
+  requestPayloadLimit: 1mb
+  responseCompressionEnabled: true
+  tracing:
+    enabled: false
+    url: 'http://localhost:55681/v1/trace'
+    ratio: 1
+  metrics:
+    enabled: false
+    url: 'http://localhost:55681/v1/metrics'
+
+dbConfig:
+  host: postgres.example.invalid
+  port: 5432
+  username: replace-me
+  password: replace-me
+  database: catalogex
+  sslAuth:
+    enabled: false
+    secretName: secret-name
+    certFileName: postgresql.crt
+    keyFileName: postgresql.key
+    caFileName: root.crt
+
+resources:
+  enabled: false
+  value:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+route:
+  enabled: true
+  path: /
+  tls:
+    termination: edge
+  timeout:
+    enabled: false
+    duration: 60s
