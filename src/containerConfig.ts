@@ -27,9 +27,6 @@ export async function registerExternalValues(options: RegisterOptions = {}): Pro
     mixin: getOtelMixin(),
   });
 
-  const metrics = new Registry();
-  config.initializeMetrics(metrics);
-
   const cleanupRegistry = new CleanupRegistry({
     overallTimeout: config.get('server.shutdownTimeoutMs'),
     logger,
@@ -57,7 +54,14 @@ export async function registerExternalValues(options: RegisterOptions = {}): Pro
     },
     {
       token: SERVICES.METRICS,
-      provider: { useValue: metrics },
+      provider: {
+        useFactory: instancePerContainerCachingFactory((container) => {
+          const metricsRegistry = new Registry();
+          const config = container.resolve<ConfigType>(SERVICES.CONFIG);
+          config.initializeMetrics(metricsRegistry);
+          return metricsRegistry;
+        }),
+      },
     },
     {
       token: SERVICES.ON_SIGNAL,

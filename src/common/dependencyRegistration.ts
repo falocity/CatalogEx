@@ -1,22 +1,29 @@
 import 'reflect-metadata';
-import { container as rootContainer } from 'tsyringe';
-import type { DependencyContainer, FactoryProvider, InjectionToken, ValueProvider } from 'tsyringe';
+import { container as defaultContainer } from 'tsyringe';
+import type { ClassProvider, DependencyContainer, FactoryProvider, InjectionToken, RegistrationOptions, ValueProvider } from 'tsyringe';
+import type { constructor } from 'tsyringe/dist/typings/types/index.js';
+
+export type Providers<T> = ValueProvider<T> | FactoryProvider<T> | ClassProvider<T> | constructor<T>;
 
 export interface InjectionObject<T> {
   token: InjectionToken<T>;
-  provider: ValueProvider<T> | FactoryProvider<T>;
+  provider: Providers<T>;
+  options?: RegistrationOptions;
+  postInjectionHook?: (container: DependencyContainer) => void | Promise<void>;
 }
 
-export function registerDependencies(dependencies: InjectionObject<unknown>[], overrides: InjectionObject<unknown>[] = []): DependencyContainer {
-  const container = rootContainer.createChildContainer();
+export const registerDependencies = async (
+  dependencies: InjectionObject<unknown>[],
+  override?: InjectionObject<unknown>[],
+  useChild = true
+): Promise<DependencyContainer> => {
+  const container = useChild ? defaultContainer.createChildContainer() : defaultContainer;
 
-  for (const dependency of [...dependencies, ...overrides]) {
-    if ('useValue' in dependency.provider) {
-      container.registerInstance(dependency.token, dependency.provider.useValue);
-    } else {
-      container.register(dependency.token, dependency.provider);
-    }
+  for (const dep of dependencies) {
+    const injectionObj = override?.find((overrideObj) => overrideObj.token === dep.token) ?? dep;
+    container.register(injectionObj.token, injectionObj.provider as constructor<unknown>, injectionObj.options);
+    await dep.postInjectionHook?.(container);
   }
 
   return container;
-}
+};
