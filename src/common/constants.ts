@@ -14,3 +14,7 @@ export const SERVICES = {
   GEOMETRY_VALIDATOR: Symbol('GeometryValidator'),
 } as const;
 /* eslint-enable @typescript-eslint/naming-convention */
+export const MAX_TCP_PORT = 65535;
+export const PRODUCT_NAME_MAX_LENGTH = 48;
+export const POSTGRES_CHECK_VIOLATION = '23514';
+export const POSTGRES_NUMERIC_OUT_OF_RANGE = '22003';

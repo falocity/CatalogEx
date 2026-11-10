@@ -2,9 +2,7 @@ import { DrizzleQueryError } from 'drizzle-orm';
 import { DatabaseError } from 'pg';
 import { StatusCodes } from 'http-status-codes';
 import { AppError, ValidationError } from '../../errors.js';
-
-const POSTGRES_CHECK_VIOLATION = '23514';
-const POSTGRES_NUMERIC_OUT_OF_RANGE = '22003';
+import { POSTGRES_CHECK_VIOLATION, POSTGRES_NUMERIC_OUT_OF_RANGE } from '../../common/constants.js';
 
 export class ProductValidationError extends ValidationError {
   public constructor(field: string, message: string) {

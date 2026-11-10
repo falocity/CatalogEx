@@ -1,8 +1,7 @@
 import typebox from 'typebox';
 import { commonBoilerplateV3, type commonBoilerplateV3Type } from '@map-colonies/schemas';
 import type { typeSymbol } from '@map-colonies/schemas/build/schemas/symbol.js';
-
-const MAX_TCP_PORT = 65535;
+import { MAX_TCP_PORT } from './constants.js';
 
 function stringSetting(environmentVariable: string): typebox.TString {
   return typebox.String({

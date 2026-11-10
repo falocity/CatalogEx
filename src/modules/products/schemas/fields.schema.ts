@@ -1,4 +1,5 @@
 import typebox from 'typebox';
+import { PRODUCT_NAME_MAX_LENGTH } from '../../../common/constants.js';
 
 const productIdSchema = typebox.String({
   format: 'uuid',
@@ -6,7 +7,7 @@ const productIdSchema = typebox.String({
 
 const productNameSchema = typebox.String({
   minLength: 1,
-  maxLength: 48,
+  maxLength: PRODUCT_NAME_MAX_LENGTH,
 });
 
 const productDescriptionSchema = typebox.String({
