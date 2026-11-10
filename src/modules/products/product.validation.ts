@@ -7,24 +7,24 @@ export function validateBoundingPolygon(geometry: BoundingPolygon): void {
 
   let dimensions: number | undefined;
 
-  for (const polygon of polygons) {
-    for (const ring of polygon) {
+  polygons.forEach((polygon) => {
+    polygon.forEach((ring) => {
       const first = ring[0];
       const last = ring[ring.length - 1];
 
-      if (!first || !last || first.length !== last.length || first.some((coordinate, index) => coordinate !== last[index])) {
+      if (last === undefined || first?.length !== last.length || first.some((coordinate, index) => coordinate !== last[index])) {
         throw new ProductValidationError('boundingPolygon', 'Each ring must end with the same position it starts with.');
       }
 
-      for (const position of ring) {
+      ring.forEach((position) => {
         dimensions ??= position.length;
 
         if (position.length !== dimensions) {
           throw new ProductValidationError('boundingPolygon', 'All positions must consistently use two or three coordinates.');
         }
-      }
-    }
-  }
+      });
+    });
+  });
 }
 
 export function validateProductFields(input: Partial<CreateProduct>): void {
