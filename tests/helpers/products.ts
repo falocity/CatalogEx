@@ -94,7 +94,6 @@ export async function withProductTest(run: (context: { requests: ProductsRequest
     ({ app } = await buildApp(
       {},
       {
-        config,
         override: [
           {
             token: SERVICES.LOGGER,

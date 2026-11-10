@@ -13,13 +13,12 @@ import { createDatabase, createDatabaseReadiness, createPool } from './db/client
 import { stopTracing } from './common/tracing.js';
 
 export interface RegisterOptions {
-  config?: ConfigType;
   override?: InjectionObject<unknown>[];
 }
 
 export async function registerExternalValues(options: RegisterOptions = {}): Promise<DependencyContainer> {
-  const config = options.config ?? getConfig();
-
+  const config = getConfig();
+  
   const { opentelemetryOptions, ...loggerConfig } = config.get('telemetry.logger');
   const logger = await jsLogger({
     ...loggerConfig,
