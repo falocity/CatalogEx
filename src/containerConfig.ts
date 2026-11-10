@@ -9,7 +9,7 @@ import { CleanupRegistry } from '@map-colonies/cleanup-registry';
 import { getConfig, type ConfigType } from './common/config.js';
 import { SERVICES } from './common/constants.js';
 import { registerDependencies, type InjectionObject } from './common/dependencyRegistration.js';
-import { createDatabase, createDatabaseReadiness, createPool } from './db/client.js';
+import { databaseFactory, databasePoolFactory, databaseReadinessFactory } from './db/dependencies.js';
 import { stopTracing } from './common/tracing.js';
 
 export interface RegisterOptions {
@@ -18,7 +18,7 @@ export interface RegisterOptions {
 
 export async function registerExternalValues(options: RegisterOptions = {}): Promise<DependencyContainer> {
   const config = getConfig();
-  
+
   const { opentelemetryOptions, ...loggerConfig } = config.get('telemetry.logger');
   const logger = await jsLogger({
     ...loggerConfig,
@@ -71,21 +71,23 @@ export async function registerExternalValues(options: RegisterOptions = {}): Pro
     {
       token: SERVICES.POOL,
       provider: {
-        useFactory: instancePerContainerCachingFactory((container) => createPool(container.resolve<ConfigType>(SERVICES.CONFIG))),
+        useFactory: instancePerContainerCachingFactory(databasePoolFactory),
+      },
+      postInjectionHook(container): void {
+        const pool = container.resolve<Pool>(SERVICES.POOL);
+        cleanupRegistry.register({ id: SERVICES.POOL, func: pool.end.bind(pool) });
       },
     },
     {
       token: SERVICES.DATABASE,
       provider: {
-        useFactory: instancePerContainerCachingFactory((container) => createDatabase(container.resolve<Pool>(SERVICES.POOL))),
+        useFactory: instancePerContainerCachingFactory(databaseFactory),
       },
     },
     {
       token: SERVICES.DATABASE_READINESS,
       provider: {
-        useFactory: instancePerContainerCachingFactory((container) =>
-          createDatabaseReadiness(container.resolve<Pool>(SERVICES.POOL), container.resolve<ConfigType>(SERVICES.CONFIG))
-        ),
+        useFactory: instancePerContainerCachingFactory(databaseReadinessFactory),
       },
     },
     {
@@ -94,5 +96,15 @@ export async function registerExternalValues(options: RegisterOptions = {}): Pro
     },
   ];
 
-  return registerDependencies(dependencies, options.override);
+  try {
+    return await registerDependencies(dependencies, options.override);
+  } catch (error) {
+    try {
+      await cleanupRegistry.trigger();
+    } catch (cleanupError) {
+      logger.error({ err: cleanupError }, 'Failed to clean up after dependency registration error');
+    }
+
+    throw error;
+  }
 }
