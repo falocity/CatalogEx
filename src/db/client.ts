@@ -1,6 +1,32 @@
+import { readFileSync } from 'node:fs';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
+import { Pool, type PoolConfig } from 'pg';
 import type { ConfigType } from '../common/config.js';
+import type { AppConfig } from '../common/config.schema.js';
+
+function getPoolAuthentication(database: AppConfig['database']): Pick<PoolConfig, 'password' | 'ssl'> {
+  if (!database.enableSslAuth) {
+    if (database.password === undefined) {
+      throw new Error('POSTGRES_PASSWORD is required when database certificate authentication is disabled');
+    }
+
+    return { password: database.password };
+  }
+
+  if (database.sslPaths === undefined) {
+    throw new Error('DB_CERT_PATH, DB_KEY_PATH, and DB_CA_PATH are required for database certificate authentication');
+  }
+
+  const { cert, key, ca } = database.sslPaths;
+  return {
+    ssl: {
+      cert: readFileSync(cert),
+      key: readFileSync(key),
+      ca: readFileSync(ca),
+      rejectUnauthorized: true,
+    },
+  };
+}
 
 export function createPool(config: ConfigType): Pool {
   const database = config.get('database');
@@ -10,7 +36,7 @@ export function createPool(config: ConfigType): Pool {
     port: database.port,
     database: database.database,
     user: database.user,
-    password: database.password,
+    ...getPoolAuthentication(database),
     max: database.maxConnections,
     idleTimeoutMillis: database.idleTimeoutMs,
     connectionTimeoutMillis: database.connectionTimeoutMs,

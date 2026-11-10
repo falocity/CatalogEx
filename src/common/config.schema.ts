@@ -40,7 +40,23 @@ const schema = typebox.Object(
         port: integerSetting('POSTGRES_PORT', 1, MAX_TCP_PORT),
         database: stringSetting('POSTGRES_DB'),
         user: stringSetting('POSTGRES_USER'),
-        password: stringSetting('POSTGRES_PASSWORD'),
+        password: typebox.Optional(stringSetting('POSTGRES_PASSWORD')),
+        enableSslAuth: typebox.Optional(
+          typebox.Boolean({
+            'x-env-value': 'DB_ENABLE_SSL_AUTH',
+            'x-env-format': 'json',
+          })
+        ),
+        sslPaths: typebox.Optional(
+          typebox.Object(
+            {
+              cert: stringSetting('DB_CERT_PATH'),
+              key: stringSetting('DB_KEY_PATH'),
+              ca: stringSetting('DB_CA_PATH'),
+            },
+            { additionalProperties: false }
+          )
+        ),
         maxConnections: integerSetting('DB_POOL_MAX', 1),
         idleTimeoutMs: integerSetting('DB_IDLE_TIMEOUT_MS', 0),
         connectionTimeoutMs: integerSetting('DB_CONNECTION_TIMEOUT_MS', 1),
