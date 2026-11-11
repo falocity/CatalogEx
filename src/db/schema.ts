@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { check, customType, doublePrecision, index, integer, pgEnum, pgTable, text, uuid, varchar } from 'drizzle-orm/pg-core';
+import { PRODUCT_NAME_MAX_LENGTH } from '../common/constants.js';
 
 const postgisGeometry = customType<{
   data: string;
@@ -18,7 +19,7 @@ export const products = pgTable(
   'products',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    name: varchar('name', { length: 48 }).notNull(),
+    name: varchar('name', { length: PRODUCT_NAME_MAX_LENGTH }).notNull(),
     description: text('description'),
     boundingPolygon: postgisGeometry('bounding_polygon').notNull(),
     consumptionLink: text('consumption_link').notNull(),

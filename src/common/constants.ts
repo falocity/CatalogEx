@@ -6,7 +6,7 @@ export const SERVICES = {
   METRICS: Symbol('Metrics'),
   ON_SIGNAL: Symbol('OnSignal'),
   CLEANUP_REGISTRY: Symbol('CleanupRegistry'),
-
+  APPLICATION: Symbol('Application'),
   POOL: Symbol('DatabasePool'),
   DATABASE: Symbol('Database'),
   DATABASE_READINESS: Symbol('DatabaseReadiness'),
