@@ -1,3 +1,7 @@
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
 import fastify from 'fastify';
 import type { FastifyBaseLogger, FastifyInstance, FastifyServerOptions } from 'fastify';
 import { StatusCodes } from 'http-status-codes';
@@ -27,6 +31,18 @@ export class ServerBuilder {
     });
 
     registerErrorHandler(app);
+
+    const openApiPath = fileURLToPath(new URL('../openapi.yaml', import.meta.url));
+
+    app.register(swagger, {
+      mode: 'static',
+      specification: {
+        path: openApiPath,
+        baseDir: dirname(openApiPath),
+      },
+    });
+
+    app.register(swaggerUi, { routePrefix: '/docs' });
 
     app.addHook('onRequest', async (request, reply) => {
       if (request.method !== 'POST' && request.method !== 'PATCH') {
