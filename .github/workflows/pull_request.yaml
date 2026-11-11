@@ -34,11 +34,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NODE_ENV: test
-      POSTGRES_HOST: 127.0.0.1
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: catalog_ci
-      POSTGRES_USER: catalog_ci
-      POSTGRES_PASSWORD: catalog_ci_test_password
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: catalog_ci
+      DB_USERNAME: catalog_ci
+      DB_PASSWORD: catalog_ci_test_password
+      DB_ENABLE_SSL_AUTH: 'false'
 
     services:
       db:

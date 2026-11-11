@@ -21,7 +21,9 @@
     "host": "127.0.0.1",
     "port": 5432,
     "database": "catalog",
-    "enableSslAuth": false,
+    "ssl": {
+      "enabled": false
+    },
     "maxConnections": 10,
     "idleTimeoutMs": 30000,
     "connectionTimeoutMs": 5000
