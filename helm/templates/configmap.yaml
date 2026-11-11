@@ -12,14 +12,16 @@ data:
   RESPONSE_COMPRESSION_ENABLED: {{ .Values.env.responseCompressionEnabled | quote }}
   LOG_PRETTY_PRINT_ENABLED: 'false'
   LOG_LEVEL: {{ .Values.env.logLevel | quote }}
-  POSTGRES_HOST: {{ .Values.dbConfig.host | quote }}
-  POSTGRES_PORT: {{ .Values.dbConfig.port | quote }}
-  POSTGRES_DB: {{ .Values.dbConfig.database | quote }}
+  DB_HOST: {{ .Values.dbConfig.host | quote }}
+  DB_PORT: {{ .Values.dbConfig.port | quote }}
+  DB_NAME: {{ .Values.dbConfig.database | quote }}
   {{- if .Values.dbConfig.sslAuth.enabled }}
   DB_ENABLE_SSL_AUTH: "true"
   DB_CERT_PATH: {{ printf "/tmp/certs/%s" .Values.dbConfig.sslAuth.certFileName | quote }}
   DB_KEY_PATH: {{ printf "/tmp/certs/%s" .Values.dbConfig.sslAuth.keyFileName | quote }}
+  {{- if .Values.dbConfig.sslAuth.caFileName }}
   DB_CA_PATH: {{ printf "/tmp/certs/%s" .Values.dbConfig.sslAuth.caFileName | quote }}
+  {{- end }}
   {{- else }}
   DB_ENABLE_SSL_AUTH: "false"
   {{- end }}

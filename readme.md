@@ -6,12 +6,15 @@ CatalogEx stores geospatial product metadata and searches product footprints. It
 
 The HTTP API uses Fastify and TypeBox for routes and request validation. Product controllers handle HTTP responses, services apply product rules, and repositories use Drizzle to query PostgreSQL. PostGIS stores and searches Polygon and MultiPolygon footprints. `openapi.yaml` defines the API contract.
 
-Configuration comes from `config/default.json` with environment overrides. The application container creates and shares dependencies within one application instance. `/liveness` checks that the HTTP service responds; `/readiness` checks the database.
+Configuration comes from `config/default.json`, private local configuration, and environment overrides. Configuration is validated using `vectorCatalogexV1` from `@map-colonies/schemas`, which references the common database and telemetry schemas.
+
+The application container creates and shares dependencies within one application instance. `/liveness` checks that the HTTP service responds; `/readiness` checks the database.
 
 ## Requirements
 
 - Node.js 24 and npm (`.nvmrc` specifies the Node version).
-- PostgreSQL 17 with PostGIS 3.5. Docker is optional if you run the database locally.
+- PostgreSQL with PostGIS. The local development database uses PostgreSQL 17 with PostGIS 3.5.
+- Docker is optional if you already have a suitable database.
 
 ## Local setup
 
@@ -37,13 +40,16 @@ Configuration comes from `config/default.json` with environment overrides. The a
        "host": "127.0.0.1",
        "port": 5436,
        "database": "catalog",
-       "user": "catalogAdmin",
-       "password": "your-private-password"
+       "username": "catalogAdmin",
+       "password": "your-private-password",
+       "ssl": {
+         "enabled": false
+       }
      }
    }
    ```
 
-   Adjust the values to match your database. This file is ignored by Git. Shared, non-secret settings live in `config/default.json`; `src/common/config.schema.ts` defines the configuration and supported environment overrides. Do not put passwords in `default.json`.
+   Adjust the values to match your database. This file is ignored by Git. Shared, non-secret settings live in `config/default.json`. The shared configuration schema defines validation and supported environment overrides. Do not put passwords in `default.json`.
 
 4. Apply migrations and start the API:
 
@@ -52,19 +58,54 @@ Configuration comes from `config/default.json` with environment overrides. The a
    npm run dev
    ```
 
-   The API listens on `127.0.0.1:8080` by default. If that port is occupied, use `PORT=18080 npm run dev`.
+   The API listens on `127.0.0.1:8080` by default. If that port is occupied, use:
+
+   ```bash
+   PORT=18080 npm run dev
+   ```
+
+   If the Compose application is already using port 8080, stop only that application before starting the development process:
+
+   ```bash
+   docker compose stop app
+   ```
 
 5. Check the service and run the project checks:
 
    ```bash
    curl -i http://127.0.0.1:8080/liveness
    curl -i http://127.0.0.1:8080/readiness
+   npm run format
+   npm run lint
    npm run typecheck
    npm run build
    npm test
    ```
 
-   Integration tests need a migrated PostgreSQL/PostGIS database. A separate test database is recommended.
+   Adjust the URLs if you changed the port. Integration tests need a migrated PostgreSQL/PostGIS database. A separate test database is recommended.
+
+## Database configuration
+
+The API and migration process use the same database configuration.
+
+| Environment variable       | Configuration field            |
+| -------------------------- | ------------------------------ |
+| `DB_HOST`                  | `database.host`                |
+| `DB_PORT`                  | `database.port`                |
+| `DB_NAME`                  | `database.database`            |
+| `DB_USERNAME`              | `database.username`            |
+| `DB_PASSWORD`              | `database.password`            |
+| `DB_ENABLE_SSL_AUTH`       | `database.ssl.enabled`         |
+| `DB_CERT_PATH`             | `database.ssl.cert`            |
+| `DB_KEY_PATH`              | `database.ssl.key`             |
+| `DB_CA_PATH`               | `database.ssl.ca`              |
+| `DB_POOL_MAX`              | `database.maxConnections`      |
+| `DB_IDLE_TIMEOUT_MS`       | `database.idleTimeoutMs`       |
+| `DB_CONNECTION_TIMEOUT_MS` | `database.connectionTimeoutMs` |
+
+When SSL is enabled, the shared schema requires client certificate and private key paths. A CA path is optional; when omitted, Node.js uses its default trusted CAs. Server certificate verification remains enabled. Password and SSL settings can coexist.
+
+The `POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD` variables used by the PostgreSQL Docker image initialize the database container. Keep those names in the database service; the API and migration containers use the `DB_*` variables above.
 
 ## API examples
 
@@ -113,7 +154,7 @@ Listing and search return `items`, `limit`, `offset`, and `hasMore`. The default
 
 After changing `src/db/schema.ts`, run `npm run db:generate`, review the generated SQL, and commit the SQL and Drizzle metadata together. Apply committed migrations with `npm run db:migrate`.
 
-### Container images
+## Container images
 
 Build the API and migration images from the same revision:
 
@@ -122,11 +163,22 @@ docker build -t catalogex-service .
 docker build -f migrations.Dockerfile -t catalogex-migrations .
 ```
 
-Run the migration image as a one-off job before starting or updating the API. Both images take the same `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD` settings at runtime. Use a database hostname reachable from the container. For example, replace the network and private env file below with your own values:
+Run the migration image as a one-off job before starting or updating the API. Both images take the same `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, and `DB_PASSWORD` settings at runtime, along with SSL settings when enabled.
+
+Use a database hostname reachable from the containers. For example, replace the network and private env file below with your own values:
 
 ```bash
-docker run --rm --network catalogex-db-network --env-file "$HOME/.config/catalogex/postgres.env" catalogex-migrations &&
-docker run --rm --network catalogex-db-network --env-file "$HOME/.config/catalogex/postgres.env" -p 8080:8080 catalogex-service
+docker run --rm \
+  --network catalogex-db-network \
+  --env-file "$HOME/.config/catalogex/postgres.env" \
+  catalogex-migrations &&
+docker run --rm \
+  --network catalogex-db-network \
+  --env-file "$HOME/.config/catalogex/postgres.env" \
+  -p 8080:8080 \
+  catalogex-service
 ```
+
+The private env file must use the API's `DB_*` connection variables. When SSL is enabled, mount the certificate files into both containers and use their container paths in the corresponding environment variables.
 
 Start the service image after the migration exits successfully. Only the migration image contains the SQL migration files.
