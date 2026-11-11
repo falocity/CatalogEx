@@ -6,15 +6,7 @@ import type { AppConfig } from '../common/config.schema.js';
 
 function getPoolAuthentication(database: AppConfig['database']): Pick<PoolConfig, 'password' | 'ssl'> {
   if (!database.enableSslAuth) {
-    if (database.password === undefined) {
-      throw new Error('POSTGRES_PASSWORD is required when database certificate authentication is disabled');
-    }
-
     return { password: database.password };
-  }
-
-  if (database.sslPaths === undefined) {
-    throw new Error('DB_CERT_PATH, DB_KEY_PATH, and DB_CA_PATH are required for database certificate authentication');
   }
 
   const { cert, key, ca } = database.sslPaths;
