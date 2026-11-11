@@ -1,25 +1,11 @@
 {
+  "extends": "@map-colonies/tsconfig/tsconfig-app",
   "compilerOptions": {
-    "rootDir": "./src",
-    "outDir": "./dist",
-
-    "module": "NodeNext",
-    "target": "ES2022",
-    "lib": ["ES2022"],
-    "types": ["node"],
-
-    "sourceMap": true,
-    "noEmitOnError": true,
-
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-
+    "rootDir": ".",
+    "types": ["node", "lodash"],
     "verbatimModuleSyntax": true,
-    "isolatedModules": true,
-    "noUncheckedSideEffectImports": true,
-    "moduleDetection": "force",
-    "skipLibCheck": true
+    "noUncheckedSideEffectImports": true
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src", "tests", "drizzle.config.ts", "vitest.config.mts"],
+  "exclude": ["node_modules", "dist"]
 }

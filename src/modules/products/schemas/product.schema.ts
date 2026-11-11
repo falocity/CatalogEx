@@ -1,32 +1,44 @@
-import Type from "typebox";
+import typebox from 'typebox';
 import {
-  BoundingPolygonSchema,
-  ConsumptionProtocolSchema,
-  ConsumtionLinkSchema,
-  MaxZoom,
-  MinZoom,
-  ProductDescriptionSchema,
-  ProductIdSchema,
-  ProductNameSchema,
-  ProductTypeSchema,
-  ResolutionBestSchema,
-} from "./fields.schema.js";
+  boundingPolygonSchema,
+  consumptionProtocolSchema,
+  consumptionLinkSchema,
+  maxZoom,
+  minZoom,
+  productDescriptionSchema,
+  productIdSchema,
+  productNameSchema,
+  productTypeSchema,
+  resolutionBestSchema,
+} from './fields.schema.js';
 
-export const ProductSchema = Type.Object({
-  id: ProductIdSchema,
-  name: ProductNameSchema,
-  description: Type.Optional(ProductDescriptionSchema),
-  boundingPolygon: BoundingPolygonSchema,
-  consumptionLink: ConsumtionLinkSchema,
-  productType: ProductTypeSchema,
-  consumptionProtocol: ConsumptionProtocolSchema,
-  resolutionBest: ResolutionBestSchema,
-  minZoom: MinZoom,
-  maxZoom: MaxZoom,
+export const productSchema = typebox.Object({
+  id: productIdSchema,
+  name: productNameSchema,
+  description: typebox.Optional(productDescriptionSchema),
+  boundingPolygon: boundingPolygonSchema,
+  consumptionLink: consumptionLinkSchema,
+  productType: productTypeSchema,
+  consumptionProtocol: consumptionProtocolSchema,
+  resolutionBest: resolutionBestSchema,
+  minZoom: minZoom,
+  maxZoom: maxZoom,
 });
 
-export const CreateProductSchemaInput = Type.Omit(ProductSchema, ["id"]);
+export const createProductSchemaInput = typebox.Omit(productSchema, ['id'], {
+  additionalProperties: false,
+});
 
-export type Product = Type.Static<typeof ProductSchema>;
+export const productIdParamsSchema = typebox.Object({ id: productIdSchema }, { additionalProperties: false });
 
-export type CreateProduct = Type.Static<typeof CreateProductSchemaInput>;
+export const createProductResponseSchema = typebox.Pick(productSchema, ['id'], {
+  additionalProperties: false,
+});
+
+export type Product = typebox.Static<typeof productSchema>;
+
+export type CreateProduct = typebox.Static<typeof createProductSchemaInput>;
+
+export type ProductIdParams = typebox.Static<typeof productIdParamsSchema>;
+
+export type CreateProductResponse = typebox.Static<typeof createProductResponseSchema>;

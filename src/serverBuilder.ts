@@ -1,0 +1,82 @@
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
+import { fastify } from 'fastify';
+import type { FastifyBaseLogger, FastifyInstance, FastifyServerOptions } from 'fastify';
+import { StatusCodes } from 'http-status-codes';
+import type { Pool } from 'pg';
+import { inject, injectable } from 'tsyringe';
+
+import { SERVICES } from './common/constants.js';
+import { registerErrorHandler } from './error-handler.js';
+import { ProductsController } from './modules/products/products.controller.js';
+import { productsRoutes } from './modules/products/products.routes.js';
+
+@injectable()
+export class ServerBuilder {
+  public constructor(
+    @inject(SERVICES.LOGGER)
+    private readonly logger: FastifyBaseLogger,
+    @inject(SERVICES.POOL)
+    private readonly pool: Pool,
+    @inject(ProductsController)
+    private readonly controller: ProductsController
+  ) {}
+
+  public build(options: FastifyServerOptions = {}): FastifyInstance {
+    const app = fastify({
+      loggerInstance: this.logger,
+      ...options,
+    });
+
+    registerErrorHandler(app);
+
+    const openApiPath = fileURLToPath(new URL('../openapi.yaml', import.meta.url));
+
+    app.register(swagger, {
+      mode: 'static',
+      specification: {
+        path: openApiPath,
+        baseDir: dirname(openApiPath),
+      },
+    });
+
+    app.register(swaggerUi, { routePrefix: '/docs' });
+
+    app.addHook('onRequest', async (request, reply) => {
+      if (request.method !== 'POST' && request.method !== 'PATCH') {
+        return;
+      }
+
+      const mediaType = request.headers['content-type']?.split(';')[0]?.trim().toLowerCase();
+
+      if (mediaType !== 'application/json') {
+        return reply.code(StatusCodes.UNSUPPORTED_MEDIA_TYPE).send({
+          code: 'UNSUPPORTED_MEDIA_TYPE',
+          message: 'Content-Type must be application/json.',
+        });
+      }
+    });
+
+    app.register(productsRoutes, {
+      controller: this.controller,
+    });
+
+    const handlePoolError = (error: Error): void => {
+      this.logger.error({ err: error }, 'Unexpected database pool error');
+    };
+
+    this.pool.on('error', handlePoolError);
+
+    app.addHook('onClose', async () => {
+      try {
+        await this.pool.end();
+      } finally {
+        this.pool.off('error', handlePoolError);
+      }
+    });
+
+    return app;
+  }
+}

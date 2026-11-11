@@ -1,0 +1,34 @@
+{
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8080,
+    "shutdownTimeoutMs": 10000
+  },
+  "telemetry": {
+    "shared": {
+      "serviceName": "catalogex"
+    },
+    "tracing": {
+      "isEnabled": false
+    },
+    "metrics": {},
+    "logger": {
+      "level": "info",
+      "prettyPrint": false
+    }
+  },
+  "database": {
+    "host": "127.0.0.1",
+    "port": 5432,
+    "database": "catalog",
+    "ssl": {
+      "enabled": false
+    },
+    "maxConnections": 10,
+    "idleTimeoutMs": 30000,
+    "connectionTimeoutMs": 5000
+  },
+  "readiness": {
+    "queryTimeoutMs": 1000
+  }
+}

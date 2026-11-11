@@ -1,0 +1,125 @@
+name: pull_request
+
+on: pull_request
+
+permissions:
+  contents: read
+
+jobs:
+  eslint:
+    name: Run ESLint and Prettier
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Check formatting
+        run: npm run format
+
+  tests:
+    name: Run tests
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: catalog_ci
+      DB_USERNAME: catalog_ci
+      DB_PASSWORD: catalog_ci_test_password
+      DB_ENABLE_SSL_AUTH: 'false'
+
+    services:
+      db:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_DB: catalog_ci
+          POSTGRES_USER: catalog_ci
+          POSTGRES_PASSWORD: catalog_ci_test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U catalog_ci -d catalog_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply database migrations
+        run: npm run db:migrate
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Run tests with coverage
+        run: npm test
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: ignore
+
+  openapi-lint:
+    name: Lint OpenAPI
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - run: npx --yes @redocly/cli@2.76.0 lint openapi.yaml --format=github-actions
+
+  build-images:
+    name: Build ${{ matrix.dockerfile }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        dockerfile: [Dockerfile, migrations.Dockerfile]
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker build --file "${{ matrix.dockerfile }}" .
+
+  helm-lint:
+    name: Check Helm chart
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Lint and render the chart when present
+        run: |
+          if [[ ! -f helm/Chart.yaml ]]; then
+            echo "No Helm chart in this checkout."
+            exit 0
+          fi
+          helm lint ./helm
+          helm template catalogex ./helm > /dev/null
