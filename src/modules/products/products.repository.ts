@@ -43,27 +43,6 @@ export class ProductsRepository {
     @inject(SERVICES.LOGGER) private readonly logger: Logger
   ) {}
 
-  private async query<T>(operation: string, execute: () => PromiseLike<T>): Promise<T> {
-    const started = performance.now();
-
-    try {
-      const result = await execute();
-
-      this.logger.debug(
-        {
-          operation,
-          durationMs: performance.now() - started,
-          rowCount: Array.isArray(result) ? result.length : undefined,
-        },
-        'Product database query completed'
-      );
-
-      return result;
-    } catch (error) {
-      rethrowProductDatabaseError(error);
-    }
-  }
-
   public async createProduct(input: CreateProduct): Promise<CreateProductResponse> {
     const [created] = await this.query('create', () =>
       this.db
@@ -135,5 +114,25 @@ export class ProductsRepository {
     );
 
     return toPage(rows, limit, offset);
+  }
+  private async query<T>(operation: string, execute: () => PromiseLike<T>): Promise<T> {
+    const started = performance.now();
+
+    try {
+      const result = await execute();
+
+      this.logger.debug(
+        {
+          operation,
+          durationMs: performance.now() - started,
+          rowCount: Array.isArray(result) ? result.length : undefined,
+        },
+        'Product database query completed'
+      );
+
+      return result;
+    } catch (error) {
+      rethrowProductDatabaseError(error);
+    }
   }
 }

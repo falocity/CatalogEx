@@ -15,7 +15,7 @@ import { ProductsRequestSender } from '../helpers/productsRequestSender.js';
 
 describe('products API', () => {
   describe('Happy Path', () => {
-    it('creates a product and returns its ID and Location', async () =>
+    it('should create a product and return its ID and Location.', async () =>
       withProductTest(async ({ requests }) => {
         const response = await requests.create(
           makeProduct({
@@ -27,22 +27,24 @@ describe('products API', () => {
 
         assert.strictEqual(response.statusCode, StatusCodes.CREATED, response.body);
         const created = response.json<CreateProductResponse>();
+
         expect(created.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
         expect(created).toEqual({ id: created.id });
         expect(response.headers.location).toBe(`/products/${created.id}`);
       }));
 
-    it('retrieves the stored product', async () =>
+    it('should retrieve the stored product.', async () =>
       withProductTest(async ({ requests }) => {
         const input = makeProduct();
         const id = await storeProduct(requests, input);
         const response = await requests.getById(id);
 
         assert.strictEqual(response.statusCode, StatusCodes.OK, response.body);
+
         expect(response.json<Product>()).toEqual({ ...input, id });
       }));
 
-    it('searches by name and numeric resolution threshold', async () =>
+    it('should search by name and numeric resolution threshold.', async () =>
       withProductTest(async ({ requests }) => {
         const input = makeProduct({ resolutionBest: 0.5 });
         const id = await storeProduct(requests, input);
@@ -62,12 +64,13 @@ describe('products API', () => {
 
           assert.strictEqual(response.statusCode, StatusCodes.OK, response.body);
           const page = response.json<ProductsPage>();
+
           expect(page.items.map((product) => product.id)).toEqual(expectedIds);
           expect(page).toMatchObject({ limit: 1, offset: 0, hasMore: false });
         }
       }));
 
-    it('updates a field and preserves omitted fields', async () =>
+    it('should update a field and preserve omitted fields.', async () =>
       withProductTest(async ({ requests }) => {
         const input = makeProduct();
         const id = await storeProduct(requests, input);
@@ -77,34 +80,39 @@ describe('products API', () => {
           description: expected.description,
         });
         assert.strictEqual(update.statusCode, StatusCodes.OK, update.body);
+
         expect(update.json<Product>()).toEqual(expected);
 
         const retrieval = await requests.getById(id);
         assert.strictEqual(retrieval.statusCode, StatusCodes.OK, retrieval.body);
+
         expect(retrieval.json<Product>()).toEqual(expected);
       }));
 
-    it('deletes a product and returns 404 on a subsequent GET', async () =>
+    it('should delete a product and return 404 on a subsequent GET.', async () =>
       withProductTest(async ({ requests }) => {
         const id = await storeProduct(requests, makeProduct());
 
         const deletion = await requests.remove(id);
         assert.strictEqual(deletion.statusCode, StatusCodes.NO_CONTENT, deletion.body);
+
         expect(deletion.body).toBe('');
 
         const missing = await requests.getById(id);
         assert.strictEqual(missing.statusCode, StatusCodes.NOT_FOUND, missing.body);
+
         expect(missing.json<{ code: string }>().code).toBe('PRODUCT_NOT_FOUND');
       }));
   });
 
   describe('Sad Path', () => {
-    it.each(['PATCH', 'DELETE'] as const)('%s returns 404', async (method) => {
+    it.each(['PATCH', 'DELETE'] as const)('should return 404 for %s.', async (method) => {
       await withProductTest(async ({ requests }) => {
         const id = randomUUID();
         const response = method === 'PATCH' ? await requests.update(id, { name: 'Missing product' }) : await requests.remove(id);
 
         assert.strictEqual(response.statusCode, StatusCodes.NOT_FOUND, response.body);
+
         expect(response.json()).toEqual({
           code: 'PRODUCT_NOT_FOUND',
           message: 'Product not found.',
@@ -117,20 +125,21 @@ describe('products API', () => {
 
 describe('product footprint API', () => {
   describe('Happy Path', () => {
-    it.each(validFootprints)('stores and returns $name', async ({ geometry }) =>
+    it.each(validFootprints)('should store and return $name.', async ({ geometry }) =>
       withProductTest(async ({ requests }) => {
         const id = await storeProduct(requests, makeProduct({ boundingPolygon: geometry }));
 
         const response = await requests.getById(id);
 
         assert.strictEqual(response.statusCode, StatusCodes.OK, response.body);
+
         expect(response.json<Product>().boundingPolygon).toEqual(geometry);
       })
     );
   });
 
   describe('Bad Path', () => {
-    it('rejects Point geometry', async () =>
+    it('should reject Point geometry.', async () =>
       withProductTest(async ({ requests }) => {
         const response = await requests.create({
           ...makeProduct(),
@@ -150,7 +159,7 @@ const spatialMatches = {
 
 describe('product search', () => {
   describe('Happy Path', () => {
-    it.each(['contains', 'within', 'intersects'] as const)('%s uses the correct direction and boundary behavior', async (operator) => {
+    it.each(['contains', 'within', 'intersects'] as const)('should use the correct direction and boundary behavior for %s.', async (operator) => {
       await withProductTest(async ({ requests }) => {
         const name = makeProduct().name;
 
@@ -175,12 +184,20 @@ describe('product search', () => {
           },
         });
 
-        expect(page.items.map((product) => product.id).sort()).toEqual(spatialMatches[operator].map((label) => ids.get(label)).sort());
+        const expectedIds = spatialMatches[operator].map((label) => {
+          const id = ids.get(label);
+          assert.isDefined(id);
+          return id;
+        });
+
+        expect(page.items.map((product) => product.id).sort((left, right) => left.localeCompare(right))).toEqual(
+          expectedIds.sort((left, right) => left.localeCompare(right))
+        );
         expect(page.hasMore).toBe(false);
       });
     });
 
-    it('combines equality and numeric conditions with AND', async () => {
+    it('should combine equality and numeric conditions with AND.', async () => {
       await withProductTest(async ({ requests }) => {
         const name = makeProduct().name;
 
@@ -207,7 +224,7 @@ describe('product search', () => {
       });
     });
 
-    it('returns ordered search pages and an empty final page', async () => {
+    it('should return ordered search pages and an empty final page.', async () => {
       await withProductTest(async ({ requests }) => {
         const name = makeProduct().name;
         const ids: string[] = [];
@@ -237,7 +254,7 @@ describe('product search', () => {
       });
     });
 
-    it('lists pages matching the database snapshot', async () => {
+    it('should list pages matching the database snapshot.', async () => {
       await withProductTest(async ({ requests, client }) => {
         for (let i = 0; i < 3; i++) {
           await storeProduct(requests, makeProduct());
@@ -304,17 +321,18 @@ describe('product request validation', () => {
   });
 
   describe('Happy Path', () => {
-    it('stores minZoom zero on POST', async () => {
+    it('should store minZoom zero on POST.', async () => {
       const input = { ...makeValidationInput(names), minZoom: 0 };
       const id = await storeProduct(requests, input);
 
       const response = await requests.getById(id);
 
       assert.strictEqual(response.statusCode, StatusCodes.OK, response.body);
+
       expect(response.json<Product>().minZoom).toBe(0);
     });
 
-    it('stores minZoom zero on PATCH and preserves omitted fields', async () => {
+    it('should store minZoom zero on PATCH and preserve omitted fields.', async () => {
       const input = makeValidationInput(names);
       const id = await storeProduct(requests, input);
 
@@ -341,7 +359,7 @@ describe('product request validation', () => {
       ['PATCH', 'minZoom'],
       ['POST', 'maxZoom'],
       ['PATCH', 'maxZoom'],
-    ] as const)('%s returns 400 for %s storage overflow', async (method, field) => {
+    ] as const)('should return 400 from %s for %s storage overflow.', async (method, field) => {
       const input = makeValidationInput(names);
       const overflow = 2_147_483_648;
 
@@ -371,6 +389,7 @@ describe('product request validation', () => {
       assert.strictEqual(retrieval.statusCode, StatusCodes.OK, retrieval.body);
 
       const product = retrieval.json<Product>();
+
       expect(product.minZoom).toBe(input.minZoom);
       expect(product.maxZoom).toBe(input.maxZoom);
     });
@@ -382,7 +401,7 @@ describe('product request validation', () => {
       ['create', 'MultiPolygon'],
       ['update', 'MultiPolygon'],
       ['search', 'MultiPolygon'],
-    ] as const)('%s rejects extra %s properties', async (operation, kind) => {
+    ] as const)('should reject %s requests with extra %s properties.', async (operation, kind) => {
       const input = makeValidationInput(names);
       const id = operation === 'update' ? await storeProduct(requests, input) : undefined;
 
@@ -425,41 +444,46 @@ describe('product request validation', () => {
       expect(retrieval.json<Product>().boundingPolygon).toEqual(input.boundingPolygon);
     });
 
-    it.each(['create', 'update-both', 'update-min', 'update-max'] as const)('%s rejects invalid resulting zoom order', async (operation) => {
-      const input = { ...makeValidationInput(names), minZoom: 5 };
+    it.each(['create', 'update-both', 'update-min', 'update-max'] as const)(
+      'should reject invalid resulting zoom order for %s.',
+      async (operation) => {
+        const input = { ...makeValidationInput(names), minZoom: 5 };
 
-      const id = operation === 'create' ? undefined : await storeProduct(requests, input);
+        const id = operation === 'create' ? undefined : await storeProduct(requests, input);
 
-      const payload =
-        operation === 'create'
-          ? { ...input, minZoom: 19 }
-          : operation === 'update-both'
-            ? { minZoom: 19, maxZoom: 18 }
-            : operation === 'update-min'
-              ? { minZoom: 19 }
-              : { maxZoom: 4 };
+        const payload =
+          operation === 'create'
+            ? { ...input, minZoom: 19 }
+            : operation === 'update-both'
+              ? { minZoom: 19, maxZoom: 18 }
+              : operation === 'update-min'
+                ? { minZoom: 19 }
+                : { maxZoom: 4 };
 
-      const response = id === undefined ? await requests.create(payload) : await requests.update(id, payload);
+        const response = id === undefined ? await requests.create(payload) : await requests.update(id, payload);
 
-      const error = expectValidationError(response);
-      expect(error.message).toBe('minZoom must not exceed maxZoom.');
+        const error = expectValidationError(response);
 
-      if (id === undefined) {
-        return;
+        expect(error.message).toBe('minZoom must not exceed maxZoom.');
+
+        if (id === undefined) {
+          return;
+        }
+
+        const retrieval = await requests.getById(id);
+
+        assert.strictEqual(retrieval.statusCode, StatusCodes.OK, retrieval.body);
+
+        expect(retrieval.json<Product>()).toEqual({ ...input, id });
       }
+    );
 
-      const retrieval = await requests.getById(id);
-
-      assert.strictEqual(retrieval.statusCode, StatusCodes.OK, retrieval.body);
-
-      expect(retrieval.json<Product>()).toEqual({ ...input, id });
-    });
-
-    it.each(['POST', 'PATCH'] as const)('%s rejects unsupported request media types', async (method) => {
+    it.each(['POST', 'PATCH'] as const)('should reject unsupported request media types for %s.', async (method) => {
       const headers = { 'content-type': 'text/plain' };
       const response = method === 'POST' ? await requests.create('not JSON', headers) : await requests.update(randomUUID(), 'not JSON', headers);
 
       assert.strictEqual(response.statusCode, StatusCodes.UNSUPPORTED_MEDIA_TYPE, response.body);
+
       expect(response.json<{ code: string }>().code).toBe('UNSUPPORTED_MEDIA_TYPE');
     });
   });

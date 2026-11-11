@@ -2,7 +2,7 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
-import fastify from 'fastify';
+import { fastify } from 'fastify';
 import type { FastifyBaseLogger, FastifyInstance, FastifyServerOptions } from 'fastify';
 import { StatusCodes } from 'http-status-codes';
 import type { Pool } from 'pg';

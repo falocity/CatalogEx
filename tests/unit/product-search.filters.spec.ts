@@ -20,6 +20,7 @@ const dialect = new PgDialect();
 
 function query(input: SearchProductsInput) {
   const conditions = buildProductSearchConditions(input);
+
   if (conditions === undefined) {
     throw new Error('Expected search conditions');
   }
@@ -28,11 +29,11 @@ function query(input: SearchProductsInput) {
 }
 
 describe('product search filters', () => {
-  it('does not add WHERE conditions for an empty search', () => {
+  it('should not add WHERE conditions for an empty search.', () => {
     expect(buildProductSearchConditions({})).toBeUndefined();
   });
 
-  it('parameterizes text and joins text and numeric conditions with AND', () => {
+  it('should parameterize text and join text and numeric conditions with AND.', () => {
     const name = "example' OR TRUE; --";
 
     const result = query({
@@ -46,7 +47,7 @@ describe('product search filters', () => {
   });
 
   it.each(['equal', 'greater', 'greaterEqual', 'less', 'lessEqual'] as const)(
-    '%s parameterizes numeric thresholds beyond the stored integer range',
+    'should parameterize numeric thresholds beyond the stored integer range for %s.',
     (operator) => {
       const input: SearchProductsInput = {};
       input[operator] = { minZoom: 2_147_483_648 };
@@ -58,7 +59,7 @@ describe('product search filters', () => {
     }
   );
 
-  it.each(['contains', 'within', 'intersects'] as const)('%s parameterizes GeoJSON', (operator) => {
+  it.each(['contains', 'within', 'intersects'] as const)('should parameterize GeoJSON for %s.', (operator) => {
     const input: SearchProductsInput = {};
     input[operator] = { boundingPolygon: polygon };
 

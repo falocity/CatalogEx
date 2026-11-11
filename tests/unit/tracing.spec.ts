@@ -1,4 +1,4 @@
-import { expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 const tracingSpies = vi.hoisted(() => ({
   constructor: vi.fn(),
@@ -18,31 +18,36 @@ vi.mock('@map-colonies/tracing', () => ({
   },
 }));
 
-it('rejects access to tracing before initialization', async () => {
-  vi.resetModules();
-  const { getTracing, stopTracing } = await import('../../src/common/tracing.js');
+describe('tracing lifecycle', () => {
+  it('should reject access to tracing before initialization.', async () => {
+    vi.resetModules();
 
-  expect(() => getTracing()).toThrow('Tracing has not been initialized');
-  await expect(stopTracing()).resolves.toBeUndefined();
-});
+    const { getTracing, stopTracing } = await import('../../src/common/tracing.js');
 
-it('configures tracing and stops it during cleanup', async () => {
-  vi.resetModules();
-  tracingSpies.constructor.mockClear();
-  tracingSpies.stop.mockClear();
-
-  const { tracingFactory, getTracing, stopTracing } = await import('../../src/common/tracing.js');
-
-  const tracing = tracingFactory({});
-
-  expect(tracingSpies.constructor).toHaveBeenCalledWith({
-    autoInstrumentationsConfigMap: {
-      '@opentelemetry/instrumentation-fs': { requireParentSpan: true },
-    },
+    expect(() => getTracing()).toThrow('Tracing has not been initialized');
+    await expect(stopTracing()).resolves.toBeUndefined();
   });
-  expect(getTracing()).toBe(tracing);
 
-  await stopTracing();
+  it('should configure tracing and stop it during cleanup.', async () => {
+    vi.resetModules();
+    tracingSpies.constructor.mockClear();
+    tracingSpies.stop.mockClear();
 
-  expect(tracingSpies.stop).toHaveBeenCalledOnce();
+    const { tracingFactory, getTracing, stopTracing } = await import('../../src/common/tracing.js');
+
+    const tracing = tracingFactory({});
+
+    expect(tracingSpies.constructor).toHaveBeenCalledWith({
+      autoInstrumentationsConfigMap: {
+        '@opentelemetry/instrumentation-fs': {
+          requireParentSpan: true,
+        },
+      },
+    });
+    expect(getTracing()).toBe(tracing);
+
+    await stopTracing();
+
+    expect(tracingSpies.stop).toHaveBeenCalledOnce();
+  });
 });

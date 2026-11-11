@@ -5,11 +5,11 @@ import type { BoundingPolygon } from '../../src/modules/products/schemas/fields.
 import { validFootprints } from '../helpers/geometry.js';
 
 describe('product geometry validation', () => {
-  it.each(validFootprints)('accepts a closed $name geometry', ({ geometry }) => {
+  it.each(validFootprints)('should accept a closed $name geometry.', ({ geometry }) => {
     expect(() => validateBoundingPolygon(geometry)).not.toThrow();
   });
 
-  it('rejects an open ring', () => {
+  it('should reject an open ring.', () => {
     const geometry: BoundingPolygon = {
       type: 'Polygon',
       coordinates: [
@@ -25,7 +25,7 @@ describe('product geometry validation', () => {
     expect(() => validateBoundingPolygon(geometry)).toThrow(ProductValidationError);
   });
 
-  it('rejects mixed coordinate dimensions', () => {
+  it('should reject mixed coordinate dimensions.', () => {
     const geometry: BoundingPolygon = {
       type: 'Polygon',
       coordinates: [
@@ -43,7 +43,7 @@ describe('product geometry validation', () => {
 });
 
 describe('product fields', () => {
-  it('accepts omitted geometry on an update', () => {
+  it('should accept omitted geometry on an update.', () => {
     expect(() => validateProductFields({ name: 'renamed' })).not.toThrow();
   });
 });
