@@ -20,6 +20,21 @@ function integerSetting(environmentVariable: string, minimum: number, maximum?: 
   });
 }
 
+const databaseCommon = {
+  host: stringSetting('POSTGRES_HOST'),
+  port: integerSetting('POSTGRES_PORT', 1, MAX_TCP_PORT),
+  database: stringSetting('POSTGRES_DB'),
+  user: stringSetting('POSTGRES_USER'),
+  maxConnections: integerSetting('DB_POOL_MAX', 1),
+  idleTimeoutMs: integerSetting('DB_IDLE_TIMEOUT_MS', 0),
+  connectionTimeoutMs: integerSetting('DB_CONNECTION_TIMEOUT_MS', 1),
+};
+
+const enableSslAuthEnv = {
+  'x-env-value': 'DB_ENABLE_SSL_AUTH',
+  'x-env-format': 'json',
+};
+
 const schema = typebox.Object(
   {
     server: typebox.Object(
@@ -33,19 +48,31 @@ const schema = typebox.Object(
 
     telemetry: typebox.Unsafe<commonBoilerplateV3Type['telemetry']>(commonBoilerplateV3.properties.telemetry),
 
-    database: typebox.Object(
-      {
-        host: stringSetting('POSTGRES_HOST'),
-        port: integerSetting('POSTGRES_PORT', 1, MAX_TCP_PORT),
-        database: stringSetting('POSTGRES_DB'),
-        user: stringSetting('POSTGRES_USER'),
-        password: stringSetting('POSTGRES_PASSWORD'),
-        maxConnections: integerSetting('DB_POOL_MAX', 1),
-        idleTimeoutMs: integerSetting('DB_IDLE_TIMEOUT_MS', 0),
-        connectionTimeoutMs: integerSetting('DB_CONNECTION_TIMEOUT_MS', 1),
-      },
-      { additionalProperties: false }
-    ),
+    database: typebox.Union([
+      typebox.Object(
+        {
+          ...databaseCommon,
+          enableSslAuth: typebox.Literal(false, enableSslAuthEnv),
+          password: stringSetting('POSTGRES_PASSWORD'),
+        },
+        { additionalProperties: false }
+      ),
+      typebox.Object(
+        {
+          ...databaseCommon,
+          enableSslAuth: typebox.Literal(true, enableSslAuthEnv),
+          sslPaths: typebox.Object(
+            {
+              cert: stringSetting('DB_CERT_PATH'),
+              key: stringSetting('DB_KEY_PATH'),
+              ca: stringSetting('DB_CA_PATH'),
+            },
+            { additionalProperties: false }
+          ),
+        },
+        { additionalProperties: false }
+      ),
+    ]),
 
     readiness: typebox.Object(
       {

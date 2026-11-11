@@ -15,11 +15,11 @@ data:
   POSTGRES_HOST: {{ .Values.dbConfig.host | quote }}
   POSTGRES_PORT: {{ .Values.dbConfig.port | quote }}
   POSTGRES_DB: {{ .Values.dbConfig.database | quote }}
-  DB_CERT_PATH: /tmp/certs/{{ .Values.dbConfig.sslAuth.certFileName }}
-  DB_KEY_PATH: /tmp/certs/{{ .Values.dbConfig.sslAuth.keyFileName }}
-  DB_CA_PATH: /tmp/certs/{{ .Values.dbConfig.sslAuth.caFileName }}
   {{- if .Values.dbConfig.sslAuth.enabled }}
   DB_ENABLE_SSL_AUTH: "true"
+  DB_CERT_PATH: {{ printf "/tmp/certs/%s" .Values.dbConfig.sslAuth.certFileName | quote }}
+  DB_KEY_PATH: {{ printf "/tmp/certs/%s" .Values.dbConfig.sslAuth.keyFileName | quote }}
+  DB_CA_PATH: {{ printf "/tmp/certs/%s" .Values.dbConfig.sslAuth.caFileName | quote }}
   {{- else }}
   DB_ENABLE_SSL_AUTH: "false"
   {{- end }}
