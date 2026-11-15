@@ -7,7 +7,8 @@ import type { FastifyBaseLogger, FastifyInstance, FastifyServerOptions } from 'f
 import { StatusCodes } from 'http-status-codes';
 import type { Pool } from 'pg';
 import { inject, injectable } from 'tsyringe';
-
+import { Registry } from 'prom-client';
+import { registerMetrics } from './common/metrics.js';
 import { SERVICES } from './common/constants.js';
 import { registerErrorHandler } from './error-handler.js';
 import { ProductsController } from './modules/products/products.controller.js';
@@ -21,7 +22,9 @@ export class ServerBuilder {
     @inject(SERVICES.POOL)
     private readonly pool: Pool,
     @inject(ProductsController)
-    private readonly controller: ProductsController
+    private readonly controller: ProductsController,
+    @inject(SERVICES.METRICS)
+    private readonly metricsRegistry: Registry
   ) {}
 
   public build(options: FastifyServerOptions = {}): FastifyInstance {
@@ -29,6 +32,7 @@ export class ServerBuilder {
       loggerInstance: this.logger,
       ...options,
     });
+    registerMetrics(app, this.metricsRegistry);
 
     registerErrorHandler(app);
 
