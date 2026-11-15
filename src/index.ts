@@ -42,14 +42,14 @@ try {
     statusErrorResponse: { status: 'not_ready' },
     signal: 'SIGTERM',
     signals: ['SIGINT'],
-    timeout: config.get('server.shutdownTimeoutMs') + SHUTDOWN_GRACE_MS,
+    timeout: config.get('application.shutdownTimeoutMs') + SHUTDOWN_GRACE_MS,
     useExit0: true,
     onSignal,
   });
 
   await app.listen({
     port: config.get('server.port'),
-    host: config.get('server.host'),
+    host: '0.0.0.0',
   });
 } catch (error) {
   if (logger) {
