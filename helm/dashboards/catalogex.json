@@ -302,7 +302,7 @@
     {
       "type": "stat",
       "id": 4,
-      "title": "Requests (range, estimated)",
+      "title": "Requests",
       "description": "Requests handled in the selected time range. `increase()` extrapolates across the range, so this is an estimate. Requests recorded before a series was first scraped, such as the first request after a restart, may be missing. Health checks, /metrics, and Swagger UI (/docs) are not counted.",
       "gridPos": {
         "h": 4,
@@ -369,7 +369,7 @@
     {
       "type": "stat",
       "id": 5,
-      "title": "5xx share (range)",
+      "title": "5xx share",
       "description": "Share of requests in the selected range that returned a 5xx status. 0% means requests were handled and none failed with 5xx. \"No traffic\" means no requests were handled. \"No matching data\" means no request series match the filters. Red marks any 5xx; this is a visual cue, not an agreed SLO.",
       "gridPos": {
         "h": 4,
@@ -452,7 +452,7 @@
     {
       "type": "stat",
       "id": 6,
-      "title": "4xx share (range)",
+      "title": "4xx share",
       "description": "Share of requests in the selected range that returned a 4xx status: validation errors, unsupported content types, products that were not found, and unknown paths. Check the route table and status chart to see which.",
       "gridPos": {
         "h": 4,
@@ -531,7 +531,7 @@
     {
       "type": "stat",
       "id": 7,
-      "title": "p95 server-side duration (range)",
+      "title": "p95 server latency",
       "description": "95th percentile of server-side request duration over the selected range, across all routes and pods. It is measured inside the service, so network and router time are not included. It is estimated from histogram buckets, and with few requests it is close to the slowest request. Read it with the request count.",
       "gridPos": {
         "h": 4,
@@ -588,7 +588,7 @@
           "color": {
             "mode": "thresholds"
           },
-          "decimals": 3
+          "decimals": 1
         },
         "overrides": []
       },
@@ -623,7 +623,7 @@
     {
       "type": "table",
       "id": 9,
-      "title": "Routes (selected range)",
+      "title": "Routes",
       "description": "One row per method and route template. Request counts are estimated with `increase()`. Shares are relative to that route's requests. A 5xx share above zero is red. p50 and p95 are server-side durations estimated from histogram buckets, and need several requests to mean much. \"unmatched\" groups requests to unknown paths.",
       "gridPos": {
         "h": 9,
@@ -753,6 +753,18 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "Method"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "Requests (est.)"
             },
             "properties": [
@@ -763,6 +775,10 @@
               {
                 "id": "decimals",
                 "value": 0
+              },
+              {
+                "id": "custom.width",
+                "value": 115
               }
             ]
           },
@@ -787,11 +803,30 @@
                 }
               },
               {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1e-9
+                    }
+                  ]
+                }
+              },
+              {
                 "id": "color",
                 "value": {
-                  "mode": "fixed",
-                  "fixedColor": "orange"
+                  "mode": "thresholds"
                 }
+              },
+              {
+                "id": "custom.width",
+                "value": 90
               },
               {
                 "id": "mappings",
@@ -854,6 +889,10 @@
                 }
               },
               {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
                 "id": "mappings",
                 "value": [
                   {
@@ -882,7 +921,11 @@
               },
               {
                 "id": "decimals",
-                "value": 3
+                "value": 1
+              },
+              {
+                "id": "custom.width",
+                "value": 85
               },
               {
                 "id": "mappings",
@@ -913,7 +956,11 @@
               },
               {
                 "id": "decimals",
-                "value": 3
+                "value": 1
+              },
+              {
+                "id": "custom.width",
+                "value": 85
               },
               {
                 "id": "mappings",
@@ -948,7 +995,7 @@
     {
       "type": "bargauge",
       "id": 10,
-      "title": "Responses by status code (selected range)",
+      "title": "Status codes",
       "description": "Estimated responses per HTTP status code in the selected range: 2xx green, 4xx orange, 5xx red. Codes with no counted responses in the range are hidden. A 404 can be an expected product-not-found, a stale ID, or an unknown path; check the route table.",
       "gridPos": {
         "h": 9,
@@ -1080,7 +1127,7 @@
     {
       "type": "timeseries",
       "id": 12,
-      "title": "Requests per second by route",
+      "title": "Requests/s by route",
       "description": "Request rate per method and route template, summed across pods. Gaps mean no matching series; 0 means series exist but no requests arrived. Read this beside the duration panel.",
       "gridPos": {
         "h": 8,
@@ -1147,7 +1194,7 @@
     {
       "type": "timeseries",
       "id": 13,
-      "title": "p95 server-side request duration by route",
+      "title": "p95 server latency by route",
       "description": "95th percentile of server-side duration per method and route, combined across pods before the percentile is computed. It is estimated from buckets (5 ms, 10 ms, 25 ms, 50 ms, 100 ms, ...); values below 5 ms only mean \"under 5 ms\". Gaps mean no requests in that window. With sparse traffic, a point may reflect one or two requests.",
       "gridPos": {
         "h": 8,
@@ -1178,7 +1225,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "noValue": "No matching data",
+          "noValue": "no requests",
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
@@ -1194,7 +1241,8 @@
           },
           "color": {
             "mode": "palette-classic"
-          }
+          },
+          "decimals": 1
         },
         "overrides": []
       },
@@ -1214,7 +1262,7 @@
     {
       "type": "timeseries",
       "id": 14,
-      "title": "Responses per second by status code",
+      "title": "Responses/s by status code",
       "description": "Response rate per HTTP status code, stacked: 2xx green, 4xx orange, 5xx red.",
       "gridPos": {
         "h": 7,
@@ -1392,12 +1440,92 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "Service"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Trace Service"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Trace ID"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Span ID"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Start time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "Duration"
             },
             "properties": [
               {
-                "id": "unit",
-                "value": "ms"
+                "id": "custom.width",
+                "value": 95
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "db.statement"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 260
+              },
+              {
+                "id": "displayName",
+                "value": "SQL"
               }
             ]
           }
@@ -1412,7 +1540,7 @@
     {
       "type": "table",
       "id": 17,
-      "title": "Failed requests (5xx)",
+      "title": "Failed requests",
       "description": "Traced requests whose server span has an error status, which the HTTP instrumentation sets for 5xx responses. 4xx responses are not errors here.",
       "gridPos": {
         "h": 9,
@@ -1449,12 +1577,92 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "Service"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Trace Service"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Trace ID"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Span ID"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Start time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "Duration"
             },
             "properties": [
               {
-                "id": "unit",
-                "value": "ms"
+                "id": "custom.width",
+                "value": 95
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "db.statement"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 260
+              },
+              {
+                "id": "displayName",
+                "value": "SQL"
               }
             ]
           }
@@ -1469,7 +1677,7 @@
     {
       "type": "table",
       "id": 18,
-      "title": "Slow requests (over $slow_threshold)",
+      "title": "Slow requests (> $slow_threshold)",
       "description": "Traced requests slower than the selected threshold. The threshold is a provisional investigation filter, not an SLO: every server-side duration observed so far was under 50 ms.",
       "gridPos": {
         "h": 9,
@@ -1506,12 +1714,92 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "Service"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Trace Service"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Trace ID"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Span ID"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Start time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "Duration"
             },
             "properties": [
               {
-                "id": "unit",
-                "value": "ms"
+                "id": "custom.width",
+                "value": 95
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "db.statement"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 260
+              },
+              {
+                "id": "displayName",
+                "value": "SQL"
               }
             ]
           }
@@ -1526,8 +1814,8 @@
     {
       "type": "table",
       "id": 19,
-      "title": "Database queries (slowest first)",
-      "description": "Recent PostgreSQL query spans from API requests, sorted by duration. Each row links to its trace. The readiness check query is excluded.",
+      "title": "Slowest database queries",
+      "description": "Recent PostgreSQL query spans from API requests, slowest first, with their SQL. Open the Span ID to see the full trace. The readiness check query is excluded.",
       "gridPos": {
         "h": 9,
         "w": 12,
@@ -1546,7 +1834,7 @@
           },
           "refId": "A",
           "queryType": "traceql",
-          "query": "{resource.service.name=\"catalogex\" && resource.k8s.namespace.name=\"$namespace\" && resource.k8s.pod.name=~\"${instance:regex}\" && span.db.system=\"postgresql\" && name != \"pg-pool.connect\" && span.db.statement != \"SELECT 1\"}",
+          "query": "{resource.service.name=\"catalogex\" && resource.k8s.namespace.name=\"$namespace\" && resource.k8s.pod.name=~\"${instance:regex}\" && span.db.system=\"postgresql\" && name != \"pg-pool.connect\" && span.db.statement != \"SELECT 1\"} | select(span.db.statement)",
           "limit": 50,
           "tableType": "spans",
           "spss": 3
@@ -1563,12 +1851,92 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "Service"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Trace Service"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Trace ID"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Span ID"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Start time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "Duration"
             },
             "properties": [
               {
-                "id": "unit",
-                "value": "ms"
+                "id": "custom.width",
+                "value": 95
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "db.statement"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 260
+              },
+              {
+                "id": "displayName",
+                "value": "SQL"
               }
             ]
           }
