@@ -182,3 +182,16 @@ docker run --rm \
 The private env file must use the API's `DB_*` connection variables. When SSL is enabled, mount the certificate files into both containers and use their container paths in the corresponding environment variables.
 
 Start the service image after the migration exits successfully. Only the migration image contains the SQL migration files.
+
+## Helm deployment
+
+Keep secrets in a private values file such as `helm/myvalues.yaml`, which Git ignores. Shared, non-secret settings for each environment live in `helm/environments/`. Pass the environment file last so its settings take precedence:
+
+```bash
+helm upgrade catalogex ./helm \
+  -f helm/myvalues.yaml \
+  -f helm/environments/vector-dev.yaml \
+  --set image.tag=<tag>
+```
+
+The `vector-dev` settings send traces to the shared OpenTelemetry collector in `infra-services`.

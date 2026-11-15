@@ -98,14 +98,3 @@ Returns the global or local tracing URL.
     {{- .Values.env.tracing.url -}}
 {{- end -}}
 {{- end -}}
-
-{{/*
-Returns the global or local metrics URL.
-*/}}
-{{- define "catalogex.metricsUrl" -}}
-{{- if .Values.global.metrics.url }}
-    {{- .Values.global.metrics.url -}}
-{{- else -}}
-    {{- .Values.env.metrics.url -}}
-{{- end -}}
-{{- end -}}
