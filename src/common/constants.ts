@@ -19,3 +19,4 @@ export const PRODUCT_NAME_MAX_LENGTH = 48;
 export const POSTGRES_CHECK_VIOLATION = '23514';
 export const POSTGRES_NUMERIC_OUT_OF_RANGE = '22003';
 export const MILLISECONDSPERSECOND = 1000;
+export const IGNORED_INCOMING_TRACE_ROUTES = [/^\/liveness(?:\?|$)/, /^\/readiness(?:\?|$)/, /^\/metrics(?:\?|$)/, /^\/docs(?:[/?]|$)/];
