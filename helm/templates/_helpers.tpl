@@ -6,16 +6,14 @@ Expand the name of the chart.
 {{- end }}
 
 {{/*
-Returns the tag of the chart.
+Returns the image tag, falling back to the chart's application version.
 */}}
 {{- define "catalogex.tag" -}}
 {{- default (printf "v%s" .Chart.AppVersion) .Values.image.tag }}
 {{- end }}
 
 {{/*
-Create a default fully qualified app name.
-We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
-If release name contains chart name it will be used as a full name.
+Create a fully qualified application name.
 */}}
 {{- define "catalogex.fullname" -}}
 {{- $name := default .Chart.Name }}
@@ -27,14 +25,14 @@ If release name contains chart name it will be used as a full name.
 {{- end }}
 
 {{/*
-Create chart name and version as used by the chart label.
+Create the chart name and version label.
 */}}
 {{- define "catalogex.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
-Common labels
+Common labels, including shared MapColonies metadata.
 */}}
 {{- define "catalogex.labels" -}}
 helm.sh/chart: {{ include "catalogex.chart" . }}
@@ -43,18 +41,20 @@ helm.sh/chart: {{ include "catalogex.chart" . }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{ include "mclabels.labels" . }}
 {{- end }}
 
 {{/*
-Selector labels
+Selector labels.
 */}}
 {{- define "catalogex.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "catalogex.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
+{{ include "mclabels.selectorLabels" . }}
 {{- end }}
 
 {{/*
-Returns the environment from global if exists or from the chart's values, defaults to development
+Returns the global or local environment, defaulting to development.
 */}}
 {{- define "catalogex.environment" -}}
 {{- if .Values.global.environment }}
@@ -65,7 +65,7 @@ Returns the environment from global if exists or from the chart's values, defaul
 {{- end -}}
 
 {{/*
-Returns the cloud provider name from global if exists or from the chart's values, defaults to minikube
+Returns the global or local cloud provider flavor.
 */}}
 {{- define "catalogex.cloudProviderFlavor" -}}
 {{- if .Values.global.cloudProvider.flavor }}
@@ -78,7 +78,7 @@ Returns the cloud provider name from global if exists or from the chart's values
 {{- end -}}
 
 {{/*
-Returns the cloud provider docker registry url from global if exists or from the chart's values
+Returns the global or local Docker registry URL.
 */}}
 {{- define "catalogex.cloudProviderDockerRegistryUrl" -}}
 {{- if .Values.global.cloudProvider.dockerRegistryUrl }}
@@ -89,18 +89,18 @@ Returns the cloud provider docker registry url from global if exists or from the
 {{- end -}}
 
 {{/*
-Returns the tracing url from global if exists or from the chart's values
+Returns the global or local tracing URL.
 */}}
 {{- define "catalogex.tracingUrl" -}}
 {{- if .Values.global.tracing.url }}
     {{- .Values.global.tracing.url -}}
-{{- else if .Values.cloudProvider -}}
+{{- else -}}
     {{- .Values.env.tracing.url -}}
 {{- end -}}
 {{- end -}}
 
 {{/*
-Returns the tracing url from global if exists or from the chart's values
+Returns the global or local metrics URL.
 */}}
 {{- define "catalogex.metricsUrl" -}}
 {{- if .Values.global.metrics.url }}
