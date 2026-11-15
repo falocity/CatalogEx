@@ -195,3 +195,9 @@ helm upgrade catalogex ./helm \
 ```
 
 The `vector-dev` settings send traces to the shared OpenTelemetry collector in `infra-services`.
+
+## Grafana dashboard
+
+`helm/dashboards/catalogex.json` defines the CatalogEx dashboard. It uses Prometheus for traffic, errors, latency, and process metrics, and Tempo for individual requests and database queries. The dashboard UID is `catalogex-overview`. It selects its data sources through the `prometheus` and `tempo` dashboard variables.
+
+To publish it, import the file in Grafana (Dashboards → New → Import) into the target folder, and allow it to overwrite the existing dashboard with the same UID. To change it, edit it in Grafana, export it with "Export for sharing externally" turned off, replace the file, and commit the change.

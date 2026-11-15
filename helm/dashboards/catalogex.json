@@ -1,0 +1,1846 @@
+{
+  "uid": "catalogex-overview",
+  "title": "CatalogEx",
+  "tags": ["catalogex", "vector"],
+  "description": "CatalogEx service health: traffic, errors, and server-side latency from Prometheus; individual requests from Tempo.",
+  "editable": true,
+  "graphTooltip": 1,
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "refresh": "1m",
+  "timepicker": {
+    "refresh_intervals": ["1m", "5m", "15m", "30m", "1h"]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "prometheus",
+        "label": "Prometheus",
+        "type": "datasource",
+        "query": "prometheus",
+        "refresh": 1,
+        "hide": 0,
+        "current": {
+          "text": "prometheus",
+          "value": "prometheus"
+        },
+        "regex": "",
+        "includeAll": false,
+        "multi": false
+      },
+      {
+        "name": "tempo",
+        "label": "Tempo",
+        "type": "datasource",
+        "query": "tempo",
+        "refresh": 1,
+        "hide": 0,
+        "current": {
+          "text": "tempo",
+          "value": "tempo"
+        },
+        "regex": "",
+        "includeAll": false,
+        "multi": false
+      },
+      {
+        "name": "namespace",
+        "label": "Namespace",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${prometheus}"
+        },
+        "refresh": 2,
+        "hide": 0,
+        "query": {
+          "qryType": 1,
+          "query": "label_values(up{app=\"catalogex\"}, namespace)",
+          "refId": "namespace"
+        },
+        "definition": "label_values(up{app=\"catalogex\"}, namespace)",
+        "sort": 1,
+        "includeAll": false,
+        "multi": false,
+        "current": {
+          "text": "vector-dev",
+          "value": "vector-dev"
+        }
+      },
+      {
+        "name": "instance",
+        "label": "Pod",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${prometheus}"
+        },
+        "refresh": 2,
+        "hide": 0,
+        "query": {
+          "qryType": 1,
+          "query": "label_values(up{app=\"catalogex\", namespace=\"$namespace\"}, instance)",
+          "refId": "instance"
+        },
+        "definition": "label_values(up{app=\"catalogex\", namespace=\"$namespace\"}, instance)",
+        "sort": 1,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "current": {
+          "text": ["All"],
+          "value": ["$__all"]
+        }
+      },
+      {
+        "name": "slow_threshold",
+        "label": "Slow request threshold",
+        "type": "custom",
+        "hide": 0,
+        "query": "100ms,250ms,500ms,1s",
+        "includeAll": false,
+        "multi": false,
+        "current": {
+          "text": "250ms",
+          "value": "250ms"
+        },
+        "options": [
+          {
+            "text": "100ms",
+            "value": "100ms",
+            "selected": false
+          },
+          {
+            "text": "250ms",
+            "value": "250ms",
+            "selected": true
+          },
+          {
+            "text": "500ms",
+            "value": "500ms",
+            "selected": false
+          },
+          {
+            "text": "1s",
+            "value": "1s",
+            "selected": false
+          }
+        ]
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "links": [],
+  "panels": [
+    {
+      "type": "row",
+      "id": 1,
+      "title": "Overview",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "id": 2,
+      "title": "Scrape status",
+      "description": "Whether Prometheus scraped each CatalogEx pod on its last attempt (`up`). This shows that a scrape succeeded, not that the pod is ready. \"No matching target data\" means no target with these labels exists in this Prometheus for the selected filters; the cause is not shown here.",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "refId": "A",
+          "expr": "up{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\"}",
+          "legendFormat": "{{instance}}",
+          "interval": "30s",
+          "editorMode": "code",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "No matching target data",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "Up",
+                  "color": "green",
+                  "index": 0
+                },
+                "0": {
+                  "text": "Scrape failing",
+                  "color": "red",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value_and_name",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "type": "stat",
+      "id": 3,
+      "title": "Process uptime",
+      "description": "Time since each CatalogEx process started (`process_start_time_seconds`). A short uptime means the process restarted recently or the pod was replaced. This is not a Kubernetes restart count.",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "refId": "A",
+          "expr": "time() - process_start_time_seconds{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\"}",
+          "legendFormat": "{{instance}}",
+          "interval": "30s",
+          "editorMode": "code",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dtdurations",
+          "noValue": "No matching data",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value_and_name",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "type": "stat",
+      "id": 4,
+      "title": "Requests (range, estimated)",
+      "description": "Requests handled in the selected time range. `increase()` extrapolates across the range, so this is an estimate. Requests recorded before a series was first scraped, such as the first request after a restart, may be missing. Health checks, /metrics, and Swagger UI (/docs) are not counted.",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "refId": "A",
+          "expr": "sum(increase(http_request_duration_seconds_count{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\", route!~\"/docs.*\"}[$__range]))",
+          "legendFormat": "__auto",
+          "interval": "30s",
+          "editorMode": "code",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "No matching data",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "type": "stat",
+      "id": 5,
+      "title": "5xx share (range)",
+      "description": "Share of requests in the selected range that returned a 5xx status. 0% means requests were handled and none failed with 5xx. \"No traffic\" means no requests were handled. \"No matching data\" means no request series match the filters. Red marks any 5xx; this is a visual cue, not an agreed SLO.",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "refId": "A",
+          "expr": "(sum(increase(http_request_duration_seconds_count{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\", route!~\"/docs.*\", statusCode=~\"5..\"}[$__range])) or vector(0)) / sum(increase(http_request_duration_seconds_count{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\", route!~\"/docs.*\"}[$__range]))",
+          "legendFormat": "__auto",
+          "interval": "30s",
+          "editorMode": "code",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "No matching data",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "No traffic",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1e-9
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "type": "stat",
+      "id": 6,
+      "title": "4xx share (range)",
+      "description": "Share of requests in the selected range that returned a 4xx status: validation errors, unsupported content types, products that were not found, and unknown paths. Check the route table and status chart to see which.",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "refId": "A",
+          "expr": "(sum(increase(http_request_duration_seconds_count{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\", route!~\"/docs.*\", statusCode=~\"4..\"}[$__range])) or vector(0)) / sum(increase(http_request_duration_seconds_count{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\", route!~\"/docs.*\"}[$__range]))",
+          "legendFormat": "__auto",
+          "interval": "30s",
+          "editorMode": "code",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "No matching data",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "No traffic",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "type": "stat",
+      "id": 7,
+      "title": "p95 server-side duration (range)",
+      "description": "95th percentile of server-side request duration over the selected range, across all routes and pods. It is measured inside the service, so network and router time are not included. It is estimated from histogram buckets, and with few requests it is close to the slowest request. Read it with the request count.",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (increase(http_request_duration_seconds_bucket{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\", route!~\"/docs.*\"}[$__range])))",
+          "legendFormat": "__auto",
+          "interval": "30s",
+          "editorMode": "code",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "No matching data",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "No traffic",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "type": "row",
+      "id": 8,
+      "title": "Routes",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "panels": []
+    },
+    {
+      "type": "table",
+      "id": 9,
+      "title": "Routes (selected range)",
+      "description": "One row per method and route template. Request counts are estimated with `increase()`. Shares are relative to that route's requests. A 5xx share above zero is red. p50 and p95 are server-side durations estimated from histogram buckets, and need several requests to mean much. \"unmatched\" groups requests to unknown paths.",
+      "gridPos": {
+        "h": 9,
+        "w": 16,
+        "x": 0,
+        "y": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "refId": "A",
+          "expr": "sum by (method, route) (increase(http_request_duration_seconds_count{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\", route!~\"/docs.*\"}[$__range]))",
+          "legendFormat": "__auto",
+          "interval": "30s",
+          "editorMode": "code",
+          "format": "table",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "refId": "B",
+          "expr": "(sum by (method, route) (increase(http_request_duration_seconds_count{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\", route!~\"/docs.*\", statusCode=~\"4..\"}[$__range])) or sum by (method, route) (increase(http_request_duration_seconds_count{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\", route!~\"/docs.*\"}[$__range])) * 0) / sum by (method, route) (increase(http_request_duration_seconds_count{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\", route!~\"/docs.*\"}[$__range]))",
+          "legendFormat": "__auto",
+          "interval": "30s",
+          "editorMode": "code",
+          "format": "table",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "refId": "C",
+          "expr": "(sum by (method, route) (increase(http_request_duration_seconds_count{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\", route!~\"/docs.*\", statusCode=~\"5..\"}[$__range])) or sum by (method, route) (increase(http_request_duration_seconds_count{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\", route!~\"/docs.*\"}[$__range])) * 0) / sum by (method, route) (increase(http_request_duration_seconds_count{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\", route!~\"/docs.*\"}[$__range]))",
+          "legendFormat": "__auto",
+          "interval": "30s",
+          "editorMode": "code",
+          "format": "table",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "refId": "D",
+          "expr": "histogram_quantile(0.5, sum by (le, method, route) (increase(http_request_duration_seconds_bucket{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\", route!~\"/docs.*\"}[$__range])))",
+          "legendFormat": "__auto",
+          "interval": "30s",
+          "editorMode": "code",
+          "format": "table",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "refId": "E",
+          "expr": "histogram_quantile(0.95, sum by (le, method, route) (increase(http_request_duration_seconds_bucket{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\", route!~\"/docs.*\"}[$__range])))",
+          "legendFormat": "__auto",
+          "interval": "30s",
+          "editorMode": "code",
+          "format": "table",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "method": 0,
+              "route": 1,
+              "Value #A": 2,
+              "Value #B": 3,
+              "Value #C": 4,
+              "Value #D": 5,
+              "Value #E": 6
+            },
+            "renameByName": {
+              "method": "Method",
+              "route": "Route",
+              "Value #A": "Requests (est.)",
+              "Value #B": "4xx share",
+              "Value #C": "5xx share",
+              "Value #D": "p50",
+              "Value #E": "p95"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No matching data",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Requests (est.)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "4xx share"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "nan",
+                      "result": {
+                        "text": "no traffic",
+                        "index": 0
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "5xx share"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "transparent",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1e-9
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "nan",
+                      "result": {
+                        "text": "no traffic",
+                        "index": 0
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p50"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 3
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "nan",
+                      "result": {
+                        "text": "no traffic",
+                        "index": 0
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p95"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 3
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "nan",
+                      "result": {
+                        "text": "no traffic",
+                        "index": 0
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Requests (est.)",
+            "desc": true
+          }
+        ]
+      }
+    },
+    {
+      "type": "bargauge",
+      "id": 10,
+      "title": "Responses by status code (selected range)",
+      "description": "Estimated responses per HTTP status code in the selected range: 2xx green, 4xx orange, 5xx red. Codes with no counted responses in the range are hidden. A 404 can be an expected product-not-found, a stale ID, or an unknown path; check the route table.",
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "refId": "A",
+          "expr": "sum by (statusCode) (increase(http_request_duration_seconds_count{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\", route!~\"/docs.*\"}[$__range])) > 0",
+          "legendFormat": "{{statusCode}}",
+          "interval": "30s",
+          "editorMode": "code",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "noValue": "No matching data",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^2\\d\\d$/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^3\\d\\d$/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^4\\d\\d$/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^5\\d\\d$/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "type": "row",
+      "id": 11,
+      "title": "Traffic and latency over time",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "id": 12,
+      "title": "Requests per second by route",
+      "description": "Request rate per method and route template, summed across pods. Gaps mean no matching series; 0 means series exist but no requests arrived. Read this beside the duration panel.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "refId": "A",
+          "expr": "sum by (method, route) (rate(http_request_duration_seconds_count{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\", route!~\"/docs.*\"}[$__rate_interval]))",
+          "legendFormat": "{{method}} {{route}}",
+          "interval": "30s",
+          "editorMode": "code",
+          "format": "time_series",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "noValue": "No matching data",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": ["lastNotNull", "max"]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 13,
+      "title": "p95 server-side request duration by route",
+      "description": "95th percentile of server-side duration per method and route, combined across pods before the percentile is computed. It is estimated from buckets (5 ms, 10 ms, 25 ms, 50 ms, 100 ms, ...); values below 5 ms only mean \"under 5 ms\". Gaps mean no requests in that window. With sparse traffic, a point may reflect one or two requests.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, method, route) (rate(http_request_duration_seconds_bucket{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\", route!~\"/docs.*\"}[$__rate_interval])))",
+          "legendFormat": "{{method}} {{route}}",
+          "interval": "30s",
+          "editorMode": "code",
+          "format": "time_series",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "No matching data",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": ["lastNotNull", "max"]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 14,
+      "title": "Responses per second by status code",
+      "description": "Response rate per HTTP status code, stacked: 2xx green, 4xx orange, 5xx red.",
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "refId": "A",
+          "expr": "sum by (statusCode) (rate(http_request_duration_seconds_count{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\", route!~\"/docs.*\"}[$__rate_interval]))",
+          "legendFormat": "{{statusCode}}",
+          "interval": "30s",
+          "editorMode": "code",
+          "format": "time_series",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "noValue": "No matching data",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 2,
+            "fillOpacity": 70,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^2\\d\\d$/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^3\\d\\d$/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^4\\d\\d$/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^5\\d\\d$/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": ["lastNotNull", "max"]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "id": 15,
+      "title": "Traces",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 31
+      },
+      "panels": []
+    },
+    {
+      "type": "table",
+      "id": 16,
+      "title": "Recent requests",
+      "description": "The most recent traced API requests. Open a trace to see its database spans. Health checks, /metrics, and /docs are not traced.",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "${tempo}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "${tempo}"
+          },
+          "refId": "A",
+          "queryType": "traceql",
+          "query": "{resource.service.name=\"catalogex\" && resource.k8s.namespace.name=\"$namespace\" && resource.k8s.pod.name=~\"${instance:regex}\" && kind=server && span.http.target !~ \"/(readiness|liveness|metrics|docs).*\"}",
+          "limit": 20,
+          "tableType": "traces",
+          "spss": 3
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No matching traces",
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Duration"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": []
+      }
+    },
+    {
+      "type": "table",
+      "id": 17,
+      "title": "Failed requests (5xx)",
+      "description": "Traced requests whose server span has an error status, which the HTTP instrumentation sets for 5xx responses. 4xx responses are not errors here.",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 32
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "${tempo}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "${tempo}"
+          },
+          "refId": "A",
+          "queryType": "traceql",
+          "query": "{resource.service.name=\"catalogex\" && resource.k8s.namespace.name=\"$namespace\" && resource.k8s.pod.name=~\"${instance:regex}\" && kind=server && status=error}",
+          "limit": 20,
+          "tableType": "traces",
+          "spss": 3
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No matching traces",
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Duration"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": []
+      }
+    },
+    {
+      "type": "table",
+      "id": 18,
+      "title": "Slow requests (over $slow_threshold)",
+      "description": "Traced requests slower than the selected threshold. The threshold is a provisional investigation filter, not an SLO: every server-side duration observed so far was under 50 ms.",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 41
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "${tempo}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "${tempo}"
+          },
+          "refId": "A",
+          "queryType": "traceql",
+          "query": "{resource.service.name=\"catalogex\" && resource.k8s.namespace.name=\"$namespace\" && resource.k8s.pod.name=~\"${instance:regex}\" && kind=server && span.http.target !~ \"/(readiness|liveness|metrics|docs).*\" && duration > $slow_threshold}",
+          "limit": 20,
+          "tableType": "traces",
+          "spss": 3
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No matching traces",
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Duration"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": []
+      }
+    },
+    {
+      "type": "table",
+      "id": 19,
+      "title": "Database queries (slowest first)",
+      "description": "Recent PostgreSQL query spans from API requests, sorted by duration. Each row links to its trace. The readiness check query is excluded.",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 41
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "${tempo}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "${tempo}"
+          },
+          "refId": "A",
+          "queryType": "traceql",
+          "query": "{resource.service.name=\"catalogex\" && resource.k8s.namespace.name=\"$namespace\" && resource.k8s.pod.name=~\"${instance:regex}\" && span.db.system=\"postgresql\" && name != \"pg-pool.connect\" && span.db.statement != \"SELECT 1\"}",
+          "limit": 50,
+          "tableType": "spans",
+          "spss": 3
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No matching traces",
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Duration"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Duration",
+            "desc": true
+          }
+        ]
+      }
+    },
+    {
+      "type": "row",
+      "id": 23,
+      "title": "Process",
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 50
+      },
+      "panels": [
+        {
+          "type": "timeseries",
+          "id": 20,
+          "title": "CPU usage",
+          "description": "CPU time used per second by each process, in cores (1 = one full core).",
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 51
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${prometheus}"
+              },
+              "refId": "A",
+              "expr": "rate(process_cpu_seconds_total{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\"}[$__rate_interval])",
+              "legendFormat": "{{instance}}",
+              "interval": "30s",
+              "editorMode": "code",
+              "format": "time_series",
+              "instant": false,
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "suffix: cores",
+              "noValue": "No matching data",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "auto",
+                "pointSize": 4,
+                "spanNulls": false,
+                "axisSoftMin": 0,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              },
+              "color": {
+                "mode": "palette-classic"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true,
+              "calcs": ["lastNotNull", "max"]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 21,
+          "title": "Memory",
+          "description": "RSS is all memory the process holds in RAM. The V8 heap (JavaScript objects) is part of it; heap total is the reserved heap and heap used is the occupied part. No limit is shown because no reliable limit metric is available.",
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 51
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${prometheus}"
+              },
+              "refId": "A",
+              "expr": "process_resident_memory_bytes{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\"}",
+              "legendFormat": "{{instance}} RSS",
+              "interval": "30s",
+              "editorMode": "code",
+              "format": "time_series",
+              "instant": false,
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${prometheus}"
+              },
+              "refId": "B",
+              "expr": "nodejs_heap_size_total_bytes{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\"}",
+              "legendFormat": "{{instance}} heap total",
+              "interval": "30s",
+              "editorMode": "code",
+              "format": "time_series",
+              "instant": false,
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${prometheus}"
+              },
+              "refId": "C",
+              "expr": "nodejs_heap_size_used_bytes{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\"}",
+              "legendFormat": "{{instance}} heap used",
+              "interval": "30s",
+              "editorMode": "code",
+              "format": "time_series",
+              "instant": false,
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "noValue": "No matching data",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "auto",
+                "pointSize": 4,
+                "spanNulls": false,
+                "axisSoftMin": 0,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              },
+              "color": {
+                "mode": "palette-classic"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true,
+              "calcs": ["lastNotNull", "max"]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 22,
+          "title": "Event-loop lag (sampled)",
+          "description": "Event-loop delay reported at scrape time. prom-client resets its measurement on every collection, and two Prometheus servers scrape this pod. Each sample here therefore covers only the time since the previous scrape by either server, and a spike seen only by the other server is missing.",
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 51
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${prometheus}"
+              },
+              "refId": "A",
+              "expr": "max_over_time(nodejs_eventloop_lag_p99_seconds{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\"}[$__rate_interval])",
+              "legendFormat": "{{instance}} p99",
+              "interval": "30s",
+              "editorMode": "code",
+              "format": "time_series",
+              "instant": false,
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${prometheus}"
+              },
+              "refId": "B",
+              "expr": "max_over_time(nodejs_eventloop_lag_max_seconds{namespace=\"$namespace\", app=\"catalogex\", instance=~\"$instance\"}[$__rate_interval])",
+              "legendFormat": "{{instance}} max",
+              "interval": "30s",
+              "editorMode": "code",
+              "format": "time_series",
+              "instant": false,
+              "range": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "noValue": "No matching data",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "auto",
+                "pointSize": 4,
+                "spanNulls": false,
+                "axisSoftMin": 0,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              },
+              "color": {
+                "mode": "palette-classic"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true,
+              "calcs": ["lastNotNull", "max"]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
