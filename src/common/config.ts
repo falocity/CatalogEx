@@ -1,8 +1,10 @@
+import { createRequire } from 'node:module';
 import { config, type ConfigInstance } from '@map-colonies/config';
-import { vectorCatalogexV1, type vectorCatalogexV1Type } from '@map-colonies/schemas';
+import type * as schemas from '@map-colonies/schemas';
 
-type ConfigType = ConfigInstance<vectorCatalogexV1Type>;
+const { vectorCatalogexV1 } = createRequire(import.meta.url)('@map-colonies/schemas') as typeof schemas;
 
+type ConfigType = ConfigInstance<schemas.vectorCatalogexV1Type>;
 let configInstance: ConfigType | undefined;
 
 async function initConfig(offlineMode = true): Promise<void> {

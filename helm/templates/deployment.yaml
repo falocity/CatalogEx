@@ -54,7 +54,7 @@ spec:
             - secretRef:
                 name: {{ $releaseName }}-{{ $chartName }}-secret
           env:
-            - name: PORT
+            - name: SERVER_PORT
               value: {{ .Values.env.targetPort | quote }}
           ports:
             - name: http

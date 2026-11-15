@@ -10,7 +10,7 @@ vi.mock('../../src/common/config.js', () => ({
   getConfig: () => ({
     get: (key: string): unknown => {
       const values: Record<string, unknown> = {
-        'server.shutdownTimeoutMs': 1000,
+        'application.shutdownTimeoutMs': 1000,
         'telemetry.logger': { level: 'silent', prettyPrint: false },
         'telemetry.shared.serviceName': 'catalogex-registration-test',
       };

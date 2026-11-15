@@ -55,7 +55,7 @@ export async function registerExternalValues(options: RegisterOptions = {}): Pro
           const config = container.resolve<ConfigType>(SERVICES.CONFIG);
 
           return new CleanupRegistry({
-            overallTimeout: config.get('server.shutdownTimeoutMs'),
+            overallTimeout: config.get('application.shutdownTimeoutMs'),
             logger: container.resolve<Logger>(SERVICES.LOGGER),
           });
         }),
