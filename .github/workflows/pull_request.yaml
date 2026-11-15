@@ -92,11 +92,14 @@ jobs:
   openapi-lint:
     name: Lint OpenAPI
     runs-on: ubuntu-24.04
+
     steps:
       - uses: actions/checkout@v7
+
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
+
       - run: npx --yes @redocly/cli@2.76.0 lint openapi.yaml --format=github-actions
 
   build-images:
@@ -106,15 +109,31 @@ jobs:
       fail-fast: false
       matrix:
         dockerfile: [Dockerfile, migrations.Dockerfile]
+
     steps:
       - uses: actions/checkout@v7
+
       - run: docker build --file "${{ matrix.dockerfile }}" .
 
   helm-lint:
     name: Check Helm chart
     runs-on: ubuntu-24.04
+
     steps:
       - uses: actions/checkout@v7
+
+      - name: Check out mclabels 1.0.1
+        uses: actions/checkout@v7
+        with:
+          repository: MapColonies/labels-and-annotations
+          ref: 243c7c672513fbb67aef369df5f085effb6953da
+          path: .ci/mclabels
+          persist-credentials: false
+
+      - name: Package Helm dependency
+        run: |
+          helm package .ci/mclabels/helm --destination ./helm/charts
+
       - name: Lint and render the chart when present
         run: |
           if [[ ! -f helm/Chart.yaml ]]; then
