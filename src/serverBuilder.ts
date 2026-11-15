@@ -9,6 +9,7 @@ import type { Pool } from 'pg';
 import { inject, injectable } from 'tsyringe';
 import { Registry } from 'prom-client';
 import { registerMetrics } from './common/metrics.js';
+import { registerTraceRoute } from './common/traceRoute.js';
 import { SERVICES } from './common/constants.js';
 import { registerErrorHandler } from './error-handler.js';
 import { ProductsController } from './modules/products/products.controller.js';
@@ -33,6 +34,7 @@ export class ServerBuilder {
       ...options,
     });
     registerMetrics(app, this.metricsRegistry);
+    registerTraceRoute(app);
 
     registerErrorHandler(app);
 
