@@ -1,0 +1,2 @@
+CREATE INDEX "products_product_type_btree" ON "products" USING btree ("product_type");--> statement-breakpoint
+CREATE INDEX "products_resolution_best_btree" ON "products" USING btree ("resolution_best");

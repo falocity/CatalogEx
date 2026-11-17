@@ -1,0 +1,203 @@
+{
+  "id": "45d6909d-5542-4f90-b3f6-e6b223a6dffc",
+  "prevId": "2cf9b335-a4af-47e4-a1ed-1d56ec120a9a",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.products": {
+      "name": "products",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bounding_polygon": {
+          "name": "bounding_polygon",
+          "type": "geometry",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "consumption_link": {
+          "name": "consumption_link",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "product_type": {
+          "name": "product_type",
+          "type": "product_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "consumption_protocol": {
+          "name": "consumption_protocol",
+          "type": "consumption_protocol",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resolution_best": {
+          "name": "resolution_best",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "min_zoom": {
+          "name": "min_zoom",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_zoom": {
+          "name": "max_zoom",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "products_product_type_btree": {
+          "name": "products_product_type_btree",
+          "columns": [
+            {
+              "expression": "product_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "products_resolution_best_btree": {
+          "name": "products_resolution_best_btree",
+          "columns": [
+            {
+              "expression": "resolution_best",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "products_bounding_polygon_gist": {
+          "name": "products_bounding_polygon_gist",
+          "columns": [
+            {
+              "expression": "bounding_polygon",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gist",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "products_name_nonempty": {
+          "name": "products_name_nonempty",
+          "value": "char_length(\"products\".\"name\") >= 1"
+        },
+        "products_description_nonempty": {
+          "name": "products_description_nonempty",
+          "value": "char_length(\"products\".\"description\") >= 1"
+        },
+        "products_resolution_valid": {
+          "name": "products_resolution_valid",
+          "value": "\n        \"products\".\"resolution_best\" >= 0\n        AND \"products\".\"resolution_best\" < 'Infinity'::double precision\n      "
+        },
+        "products_min_zoom_nonnegative": {
+          "name": "products_min_zoom_nonnegative",
+          "value": "\"products\".\"min_zoom\" >= 0"
+        },
+        "products_max_zoom_positive": {
+          "name": "products_max_zoom_positive",
+          "value": "\"products\".\"max_zoom\" > 0"
+        },
+        "products_zoom_range_valid": {
+          "name": "products_zoom_range_valid",
+          "value": "\"products\".\"min_zoom\" <= \"products\".\"max_zoom\""
+        },
+        "products_bounding_polygon_type": {
+          "name": "products_bounding_polygon_type",
+          "value": "\n        GeometryType(\"products\".\"bounding_polygon\")\n        IN ('POLYGON', 'MULTIPOLYGON')\n      "
+        },
+        "products_bounding_polygon_srid": {
+          "name": "products_bounding_polygon_srid",
+          "value": "ST_SRID(\"products\".\"bounding_polygon\") = 4326"
+        },
+        "products_bounding_polygon_dimensions_by_code(xy,xyz)": {
+          "name": "products_bounding_polygon_dimensions_by_code(xy,xyz)",
+          "value": "ST_Zmflag(\"products\".\"bounding_polygon\") IN (0, 2)"
+        },
+        "products_bounding_polygon_valid": {
+          "name": "products_bounding_polygon_valid",
+          "value": "\n        NOT ST_IsEmpty(\"products\".\"bounding_polygon\")\n        AND ST_IsValid(\"products\".\"bounding_polygon\")\n      "
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.consumption_protocol": {
+      "name": "consumption_protocol",
+      "schema": "public",
+      "values": [
+        "WMS",
+        "WMTS",
+        "XYZ",
+        "3D Tiles"
+      ]
+    },
+    "public.product_type": {
+      "name": "product_type",
+      "schema": "public",
+      "values": [
+        "raster",
+        "rasterized vector",
+        "3d tiles",
+        "QMesh"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

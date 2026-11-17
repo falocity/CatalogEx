@@ -1,34 +1,19 @@
-import Fastify from "fastify";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyServerOptions } from 'fastify';
+import type { DependencyContainer } from 'tsyringe';
+import { SERVICES } from './common/constants.js';
+import { registerExternalValues, type RegisterOptions } from './containerConfig.js';
 
-export function buildApp(): FastifyInstance {
-  const app = Fastify({
-    logger: true,
+export async function buildApp(
+  options: FastifyServerOptions = {},
+  registerOptions: RegisterOptions = {}
+): Promise<{ app: FastifyInstance; container: DependencyContainer }> {
+  const container = await registerExternalValues({
+    ...registerOptions,
+    serverOptions: options,
   });
 
-  app.get(
-    "/health",
-    {
-      schema: {
-        response: {
-          200: {
-            type: "object",
-            properties: {
-              status: {
-                type: "string",
-                enum: ["ok"],
-              },
-            },
-            required: ["status"],
-            additionalProperties: false,
-          },
-        },
-      },
-    },
-    async () => {
-      return { status: "ok" };
-    },
-  );
-
-  return app;
+  return {
+    app: container.resolve<FastifyInstance>(SERVICES.APPLICATION),
+    container,
+  };
 }
