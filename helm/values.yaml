@@ -1,7 +1,15 @@
+mclabels:
+  environment: development
+  owner: vector
+  partOf: catalogex
+  component: backend
+  prometheus:
+    enabled: true
+    port: 8080
+    path: /metrics
 global:
   cloudProvider: {}
   tracing: {}
-  metrics: {}
   environment: {}
 
 enabled: true
@@ -30,11 +38,8 @@ env:
   responseCompressionEnabled: true
   tracing:
     enabled: false
-    url: 'http://localhost:55681/v1/trace'
+    url: 'http://localhost:4318/v1/traces'
     ratio: 1
-  metrics:
-    enabled: false
-    url: 'http://localhost:55681/v1/metrics'
 
 dbConfig:
   host: postgres.example.invalid

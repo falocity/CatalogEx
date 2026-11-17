@@ -182,3 +182,22 @@ docker run --rm \
 The private env file must use the API's `DB_*` connection variables. When SSL is enabled, mount the certificate files into both containers and use their container paths in the corresponding environment variables.
 
 Start the service image after the migration exits successfully. Only the migration image contains the SQL migration files.
+
+## Helm deployment
+
+Keep secrets in a private values file such as `helm/myvalues.yaml`, which Git ignores. Shared, non-secret settings for each environment live in `helm/environments/`. Pass the environment file last so its settings take precedence:
+
+```bash
+helm upgrade catalogex ./helm \
+  -f helm/myvalues.yaml \
+  -f helm/environments/vector-dev.yaml \
+  --set image.tag=<tag>
+```
+
+The `vector-dev` settings send traces to the shared OpenTelemetry collector in `infra-services`.
+
+## Grafana dashboard
+
+`helm/dashboards/catalogex.json` defines the CatalogEx dashboard. It uses Prometheus for traffic, errors, latency, and process metrics, and Tempo for individual requests and database queries. The dashboard UID is `catalogex-overview`. It selects its data sources through the `prometheus` and `tempo` dashboard variables.
+
+To publish it, import the file in Grafana (Dashboards → New → Import) into the target folder, and allow it to overwrite the existing dashboard with the same UID. To change it, edit it in Grafana, export it with "Export for sharing externally" turned off, replace the file, and commit the change.

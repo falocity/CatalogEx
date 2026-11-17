@@ -1,0 +1,7 @@
+# Non-secret settings for the vector-dev deployment.
+# Pass this file after any local values file so these settings take precedence.
+env:
+  tracing:
+    enabled: true
+    url: 'http://infra-otel.infra-services.svc.cluster.local:4318/v1/traces'
+    ratio: 1

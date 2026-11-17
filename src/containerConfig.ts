@@ -4,7 +4,7 @@ import { getOtelMixin } from '@map-colonies/tracing-utils';
 import { trace } from '@opentelemetry/api';
 import type { FastifyInstance, FastifyServerOptions } from 'fastify';
 import type { Pool } from 'pg';
-import { Registry } from 'prom-client';
+import { collectDefaultMetrics, Registry } from 'prom-client';
 import { instancePerContainerCachingFactory, type DependencyContainer } from 'tsyringe';
 import { CleanupRegistry } from '@map-colonies/cleanup-registry';
 import { getConfig, type ConfigType } from './common/config.js';
@@ -87,6 +87,7 @@ export async function registerExternalValues(options: RegisterOptions = {}): Pro
           const config = container.resolve<ConfigType>(SERVICES.CONFIG);
 
           config.initializeMetrics(metricsRegistry);
+          collectDefaultMetrics({ register: metricsRegistry });
 
           return metricsRegistry;
         }),

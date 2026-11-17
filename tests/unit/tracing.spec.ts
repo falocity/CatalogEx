@@ -39,6 +39,9 @@ describe('tracing lifecycle', () => {
 
     expect(tracingSpies.constructor).toHaveBeenCalledWith({
       autoInstrumentationsConfigMap: {
+        '@opentelemetry/instrumentation-http': {
+          ignoreIncomingRequestHook: expect.any(Function) as unknown,
+        },
         '@opentelemetry/instrumentation-fs': {
           requireParentSpan: true,
         },
@@ -49,5 +52,32 @@ describe('tracing lifecycle', () => {
     await stopTracing();
 
     expect(tracingSpies.stop).toHaveBeenCalledOnce();
+  });
+
+  it('should ignore only probe, metrics, and documentation requests.', async () => {
+    vi.resetModules();
+    tracingSpies.constructor.mockClear();
+
+    const { tracingFactory } = await import('../../src/common/tracing.js');
+
+    tracingFactory({});
+
+    const [[options]] = tracingSpies.constructor.mock.calls as [
+      [
+        {
+          autoInstrumentationsConfigMap: {
+            '@opentelemetry/instrumentation-http': { ignoreIncomingRequestHook: (request: { url?: string }) => boolean };
+          };
+        },
+      ],
+    ];
+    const isIgnored = (url?: string): boolean =>
+      options.autoInstrumentationsConfigMap['@opentelemetry/instrumentation-http'].ignoreIncomingRequestHook({ url });
+
+    const ignoredUrls = ['/liveness', '/readiness', '/metrics', '/metrics?name=x', '/docs', '/docs/', '/docs/static/index.html', '/docs/json'];
+    const tracedUrls = ['/products', '/products/search', '/products?limit=1', '/metrics-history', '/documents', '/readiness/extra', undefined];
+
+    expect(ignoredUrls.filter((url) => !isIgnored(url))).toEqual([]);
+    expect(tracedUrls.filter((url) => isIgnored(url))).toEqual([]);
   });
 });
